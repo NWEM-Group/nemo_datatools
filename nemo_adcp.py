@@ -1031,8 +1031,6 @@ def buoy_adcp_wrapper(buoy_name, deployment_name, instrument_name='adcp', serial
     if status == 'recovered':
         datadir = os.path.join(datadir, 'adcp')
 
-    savefile = buoy_name.lower() + '_' + deployment_name.lower() + '_adcp.nc'
-
     # Load deployment metadata for serial lookup and output metadata.
     script_dir = os.path.dirname(os.path.abspath(__file__))
     json_path = os.path.join(script_dir, 'info_jsons', 'deployments', f'{buoy_name}_deployments.json')
@@ -1079,6 +1077,8 @@ def buoy_adcp_wrapper(buoy_name, deployment_name, instrument_name='adcp', serial
             print(f"\nProcessing ADCP serial {current_serial}...")
             buoy_adcp_wrapper(buoy_name, deployment_name, instrument_name, current_serial, average_windows)
         return
+    
+    
 
     instrument_info = nemo_deployments.find_matching_deployment_instrument(
         buoy_name,
@@ -1107,7 +1107,7 @@ def buoy_adcp_wrapper(buoy_name, deployment_name, instrument_name='adcp', serial
 
     #####################
     # Realtime processing
-
+    savefile = buoy_name.lower() + '_' + deployment_name.lower() + '_adcp_sn' + serial_num + '.nc'
     if status == 'realtime':
         deployment_dict = {
             'start_deployment': start_deployment,
