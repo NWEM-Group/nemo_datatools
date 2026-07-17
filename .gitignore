@@ -11,3 +11,5 @@ info_csvs/nemoss_nemoss24a_instruments.csv
 info_csvs/nemo_deployment_parameters.xlsx
 info_jsons/user_info - Copy.json
 info_jsons/pathdirs - Copy.json
+info_jsons/pathdirs.json
+info_jsons/user_info.json

@@ -1,4 +1,4 @@
 {
-    "data_basedir":"<default_directory>",
-    "data_savedir":"<default_directory>"
+    "data_basedir":"C:\\Users\\APLUser\\NEMO_Data\\data\\",
+    "data_savedir":"C:\\Users\\APLUser\\NEMO_Data\\netCDFs\\"
 }
