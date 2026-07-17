@@ -76,7 +76,7 @@ def process_nemo_deployment(nemo_name, deployment_name):
         print(f"Running {instrument_type.upper()} processing for {nemo_name} - {deployment_name}")
         try:
             if instrument_type == 'adcp':
-                wrapper_fn(nemo_name, deployment_name, instrument_name=instrument_type, averages='10,60')
+                wrapper_fn(nemo_name, deployment_name, instrument_name=instrument_type, average_windows=[10,60])
             else:
                 wrapper_fn(nemo_name, deployment_name, instrument_name=instrument_type)
         except Exception as e:
