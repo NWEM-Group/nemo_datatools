@@ -1,0 +1,111 @@
+{
+  "buoy_name": "nemoss",
+  "buoy_title": "NEMO Subsurface (NEMO-SS) Buoy",
+  "info_url": "https://nwem.apl.uw.edu/",
+  "shorthand": "nemoss",
+  "target_depth": 100,
+  "mooring_diagram_base": "https://nwem.apl.washington.edu/NEMO/NEMO-SS/mooring_diagrams/",
+  "institution_info": {
+    "name": "Northwest Environmental Moorings Group",
+    "institution": "University of Washington - Applied Physics Laboratory",
+    "country": "United States",
+    "sector": "academic",
+    "type": "institution",
+    "url": "https://nwem.apl.uw.edu/",
+    "ror": "https://ror.org/01a258x16"
+  },
+  "deployments": {
+    "nemoss23a": {
+      "start": "2023-05-03T19:20:00Z",
+      "end": "2023-09-23T17:58:00Z",
+      "status": "recovered",
+      "latitude": 47.966667,
+      "longitude": -124.943333,
+      "depth": 100.0,
+      "instruments": {
+        "adcp1": {
+          "model": "workhorse",
+          "instrument_depth": 14.5,
+          "sn": "6878",
+          "start_time": "2023-05-02T12:00:00Z",
+          "end_time": "2023-09-24T15:12:50Z",
+          "instrument_end_time": "2023-09-24T15:16:04Z",
+          "time_drift_secs": 194.0
+        },
+        "adcp2": {
+          "model": "workhorse",
+          "instrument_depth": 93,
+          "sn": "10010",
+          "start_time": "2023-05-02T12:00:00Z",
+          "end_time": "2023-09-24T23:33:10Z",
+          "instrument_end_time": "2023-09-24T23:33:55Z",
+          "time_drift_secs": 45.0
+        },
+        "ctd/1": {
+          "model": "SBE56",
+          "sn": "8638",
+          "instrument_depth": 16.0,
+          "start_time": "2023-05-02T12:00:00Z",
+          "end_time": "2023-09-24T22:20:34Z",
+          "instrument_end_time": "2023-09-24T22:20:34Z",
+          "time_drift_secs": -2.0
+        },
+        "ctd/2": {
+          "model": "SBE37-SMP-ODO",
+          "sn": "5294",
+          "instrument_depth": 16.0,
+          "start_time": "2023-05-02T12:00:00Z",
+          "end_time": "2023-09-24T21:05:30Z",
+          "instrument_end_time": "2023-09-24T21:05:18Z",
+          "time_drift_secs": -12.0
+        }
+      }
+    },
+    "nemoss24a": {
+      "start": "2024-05-02T21:15:00",
+      "status": "recovered",
+      "latitude": 47.964883,
+      "longitude": -124.9498,
+      "depth": 99,
+      "end": "2024-10-22T20:25:00",
+      "instruments": {
+        "adcp/1": {
+          "model": "ADCP",
+          "sn": "6878",
+          "instrument_depth": 14.5,
+          "start_time": "2024-05-02T00:00:00Z",
+          "end_time": "2024-10-23T17:00:00Z",
+          "instrument_end_time": "2024-10-23T17:00:00Z",
+          "time_drift_secs": 0.0
+        },
+        "adcp/2": {
+          "model": "ADCP",
+          "sn": "11675",
+          "instrument_depth": 93.0,
+          "start_time": "2024-05-02T00:00:00Z",
+          "end_time": "2024-10-23T17:00:00Z",
+          "instrument_end_time": "2024-10-23T17:00:00Z",
+          "time_drift_secs": 0.0
+        },
+        "ctd/1": {
+          "model": "SBE56",
+          "sn": "8635",
+          "instrument_depth": 16.0,
+          "start_time": "2024-04-29T12:00:00Z",
+          "end_time": "2023-09-24T22:20:36Z",
+          "instrument_end_time": "2023-09-24T22:20:34Z",
+          "time_drift_secs": -2.0
+        },
+        "ctd/2": {
+          "model": "SBE37-ODO-IMP",
+          "sn": "5294",
+          "instrument_depth": 16.0,
+          "start_time": "2024-04-29T12:00:00Z",
+          "end_time": "2024-10-24T05:20:00Z",
+          "instrument_end_time": "2024-10-24T05:19:59Z",
+          "time_drift_secs": -1.0
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,15 @@
+name: nemodata
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - numpy
+  - pandas
+  - xarray
+  - netcdf4
+  - gsw
+  - matplotlib
+  - ioos_qc
+  - pip
+  - pip:
+      - seabirdscientific

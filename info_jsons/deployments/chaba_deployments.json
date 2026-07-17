@@ -1,0 +1,256 @@
+{
+  "buoy_name": "Cha'Ba",
+  "buoy_title": "NEMO - Cha'Ba",
+  "info_url": "https://nwem.apl.uw.edu/",
+  "shorthand": "chaba",
+  "target_depth": 100,
+  "mooring_diagram_base": "https://nwem.apl.washington.edu/NEMO/ChaBa/mooring_diagrams/",
+  "institution_info": {
+    "name": "Northwest Environmental Moorings Group",
+    "institution": "University of Washington - Applied Physics Laboratory",
+    "country": "United States",
+    "sector": "academic",
+    "type": "institution",
+    "url": "https://nwem.apl.uw.edu/",
+    "ror": "https://ror.org/01a258x16"
+  },
+  "deployments": {
+    "chaba24a": {
+      "start": "2024-05-03T16:03:00Z",
+      "end": "2024-10-22T17:05:00Z",
+      "status": "recovered",
+      "latitude": 47.964883,
+      "longitude": -124.9498,
+      "depth": 100,
+      "instruments": {
+        "ctd/1": {
+          "model": "HydroCat-EP",
+          "sn": "30737",
+          "instrument_depth": 1.5,
+          "start_time": "2024-04-29T12:00:00Z",
+          "end_time": "2024-10-29T23:08:30Z",
+          "instrument_end_time": "2024-10-29T23:08:23Z",
+          "time_drift_secs": -7.0
+        },
+        "ctd/2": {
+          "model": "SBE37-ODO-IMP",
+          "sn": "24092",
+          "instrument_depth": 25.0,
+          "start_time": "2024-04-29T12:00:00Z",
+          "end_time": "2024-10-24T04:54:20Z",
+          "instrument_end_time": "2024-10-24T04:54:13Z",
+          "time_drift_secs": -7.0
+        },
+        "ctd/3": {
+          "model": "SBE37-ODO-IMP",
+          "sn": "12325",
+          "instrument_depth": 46.0,
+          "start_time": "2024-04-29T12:00:00Z",
+          "end_time": "2024-11-01T20:31:10Z",
+          "instrument_end_time": "2024-11-01T20:31:14Z",
+          "time_drift_secs": 4.0
+        },
+        "ctd/4": {
+          "model": "SBE39",
+          "sn": "5101",
+          "instrument_depth": 60.0,
+          "start_time": "2024-04-29T12:00:00Z",
+          "end_time": "2024-11-01T22:09:00Z",
+          "instrument_end_time": "2024-11-01T22:09:41Z",
+          "time_drift_secs": 41.0
+        },
+        "ctd/5": {
+          "model": "SBE56",
+          "sn": "7330",
+          "instrument_depth": 5.0,
+          "start_time": "2024-04-29T12:00:00Z",
+          "end_time": "2024-10-24T00:15:47Z",
+          "instrument_end_time": "2024-10-24T00:15:42Z",
+          "time_drift_secs": -5.0
+        },
+        "ctd/6": {
+          "model": "SBE56",
+          "sn": "7331",
+          "instrument_depth": 10.0,
+          "start_time": "2024-04-29T12:00:00Z",
+          "end_time": "2024-10-24T00:19:23Z",
+          "instrument_end_time": "2024-10-24T00:19:21Z",
+          "time_drift_secs": -2.0
+        },
+        "ctd/7": {
+          "model": "SBE56",
+          "sn": "7332",
+          "instrument_depth": 20.0,
+          "start_time": "2024-04-29T12:00:00Z",
+          "end_time": "2024-10-24T00:19:29Z",
+          "instrument_end_time": "2024-10-24T00:19:21Z",
+          "time_drift_secs": -8.0
+        },
+        "ctd/8": {
+          "model": "SBE56",
+          "sn": "7333",
+          "instrument_depth": 50.0,
+          "start_time": "2024-04-29T12:00:00Z",
+          "end_time": "2024-10-30T22:36:00Z",
+          "instrument_end_time": "2024-10-30T22:34:28Z",
+          "time_drift_secs": -92.0
+        },
+        "ctd/9": {
+          "model": "SBE56",
+          "sn": "7334",
+          "instrument_depth": 60.0,
+          "start_time": "2024-04-29T12:00:00Z",
+          "end_time": "2024-10-24T00:24:28Z",
+          "instrument_end_time": "2024-10-24T00:24:22Z",
+          "time_drift_secs": -6.0
+        },
+        "ctd/10": {
+          "model": "SBE56",
+          "sn": "7336",
+          "instrument_depth": 70.0,
+          "start_time": "2024-04-29T12:00:00Z",
+          "end_time": "2024-10-24T00:12:47Z",
+          "instrument_end_time": "2024-10-24T00:12:40Z",
+          "time_drift_secs": -7.0
+        },
+        "ctd/11": {
+          "model": "SBE56",
+          "sn": "8638",
+          "instrument_depth": 1.5,
+          "start_time": "2024-04-29T12:00:00Z",
+          "end_time": "2024-10-30T22:39:00Z",
+          "instrument_end_time": "2024-10-30T22:38:46Z",
+          "time_drift_secs": -14.0
+        },
+        "ctd/12": {
+          "model": "SeaPHOX",
+          "sn": "129",
+          "instrument_depth": 85.0,
+          "start_time": "2024-05-01T13:47:00Z",
+          "end_time": "2024-10-22T16:25:00Z",
+          "instrument_end_time": "2024-10-22T16:46:00Z",
+          "time_drift_secs": 1260.0
+        }
+      }
+    },
+    "chaba25a": {
+      "start": "2025-04-23T19:16:00Z",
+      "status": "recovered",
+      "latitude": 47.96507,
+      "longitude": -124.950011,
+      "depth": 100,
+      "end": "2025-11-11T21:00:00Z",
+      "instruments": {
+        "ctd/1": {
+          "model": "HydroCat-EP",
+          "sn": "30737",
+          "instrument_depth": 1.5,
+          "notes": "Stopped working after a week",
+          "end_time": "2025-12-08T21:21:00Z",
+          "instrument_end_time": "2025-12-08T21:20:56Z",
+          "time_drift_secs": -4.0
+        },
+        "ctd/2": {
+          "model": "seafet",
+          "sn": "291",
+          "instrument_depth": 1.5,
+          "start_time": "2025-04-21T12:00:00Z",
+          "end_time": "2025-11-20T21:59:50Z",
+          "instrument_end_time": "2025-11-20T21:59:37Z",
+          "time_drift_secs": -13.0
+        },
+        "ctd/3": {
+          "model": "SBE37-ODO-IMP",
+          "sn": "15098",
+          "instrument_depth": 25.0,
+          "notes": "Missing/lost",
+          "start_time": "2025-04-21T12:00:00Z"
+        },
+        "ctd/4": {
+          "model": "SBE37-ODO-IMP",
+          "sn": "12325",
+          "instrument_depth": 46.0,
+          "notes": "Mostly bad data, failed after approximately 2 days",
+          "start_time": "2025-04-24T15:24:02Z",
+          "end_time": "2025-11-20T22:53:28Z",
+          "instrument_end_time": "2025-11-20T22:53:29Z",
+          "time_drift_secs": 1.0
+        },
+        "ctd/5": {
+          "model": "SBE39",
+          "sn": "5101",
+          "instrument_depth": 60.0,
+          "start_time": "2025-04-21T12:00:00Z",
+          "end_time": "2025-11-20T18:10:40Z",
+          "instrument_end_time": "2025-11-20T19:15:55Z",
+          "time_drift_secs": 3915.0
+        },
+        "ctd/6": {
+          "model": "SBE56",
+          "sn": "7328",
+          "instrument_depth": 5.0,
+          "notes": "Bad data",
+          "start_time": "2025-11-01T07:05:07Z",
+          "end_time": "2025-11-20T22:03:12Z",
+          "instrument_end_time": "2025-11-20T22:03:11Z",
+          "time_drift_secs": -1.0
+        },
+        "ctd/7": {
+          "model": "SBE56",
+          "sn": "7330",
+          "instrument_depth": 10.0,
+          "start_time": "2025-04-07T16:01:22Z",
+          "end_time": "2025-11-11T22:53:36Z",
+          "instrument_end_time": "2025-11-11T22:53:27Z",
+          "time_drift_secs": -9.0
+        },
+        "ctd/8": {
+          "model": "SBE56",
+          "sn": "7331",
+          "instrument_depth": 20.0,
+          "start_time": "2025-04-21T12:00:00Z",
+          "end_time": "2025-11-11T21:52:08Z",
+          "instrument_end_time": "2025-11-11T21:53:12Z",
+          "time_drift_secs": 64.0
+        },
+        "ctd/9": {
+          "model": "SBE56",
+          "sn": "7332",
+          "instrument_depth": 50.0,
+          "notes": "Missing/lost",
+          "start_time": "2025-04-21T12:00:00Z"
+        },
+        "ctd/10": {
+          "model": "SBE56",
+          "sn": "7334",
+          "instrument_depth": 70.0,
+          "notes": "Flooded",
+          "start_time": "2025-04-21T12:00:00Z"
+        },
+        "ctd/11": {
+          "model": "SBE56",
+          "sn": "7336",
+          "instrument_depth": 89.0,
+          "notes": "Never deployed",
+          "start_time": "2025-04-19T01:25:02Z"
+        },
+        "ctd/12": {
+          "model": "SeaPHOX",
+          "sn": "129",
+          "instrument_depth": 85.0,
+          "notes": "Wrong pressure calibration loaded onto device, manually corrected to approximately correct pressure",
+          "start_time": "2025-04-21T12:00:00Z",
+          "instrument_end_time": "2025-11-24T20:14:03Z"
+        }
+      }
+    },
+    "chaba23a": {
+      "start": "2023-05-03T17:43:00",
+      "status": "recovered",
+      "latitude": 47.965,
+      "longitude": -124.95,
+      "depth": 103,
+      "end": "2023-09-23T21:15:00"
+    }
+  }
+}
