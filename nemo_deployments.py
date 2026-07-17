@@ -545,6 +545,12 @@ def add_deployment(buoy_name, deployment_key, deployment_data):
     deployment_data = _coerce_deployment_instrument_serial_numbers(deployment_data)
     
     deployment_info['deployments'][deployment_key] = deployment_data
+    deployment_info['deployments'] = dict(
+        sorted(
+            deployment_info['deployments'].items(),
+            key=lambda item: item[0].lower()
+        )
+    )
     
     script_dir = os.path.dirname(os.path.abspath(__file__))
     json_path = os.path.join(script_dir, 'info_jsons', 'deployments', f'{buoy_name}_deployments.json')
@@ -568,6 +574,12 @@ def update_deployment(buoy_name, deployment_key, updates):
     updates = _coerce_deployment_instrument_serial_numbers(updates)
     
     deployment_info['deployments'][deployment_key].update(updates)
+    deployment_info['deployments'] = dict(
+        sorted(
+            deployment_info['deployments'].items(),
+            key=lambda item: item[0].lower()
+        )
+    )
     
     script_dir = os.path.dirname(os.path.abspath(__file__))
     json_path = os.path.join(script_dir, 'info_jsons', 'deployments', f'{buoy_name}_deployments.json')
