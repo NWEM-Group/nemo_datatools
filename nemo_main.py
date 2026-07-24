@@ -73,7 +73,7 @@ def process_nemo_deployment(nemo_name, deployment_name):
             continue
 
         wrapper_fn = processors[instrument_type]
-        print(f"Running {instrument_type.upper()} processing for {nemo_name} - {deployment_name}")
+        print(f"\nRunning {instrument_type.upper()} processing for {nemo_name} - {deployment_name}")
         try:
             if instrument_type == 'adcp':
                 wrapper_fn(nemo_name, deployment_name, instrument_name=instrument_type, average_windows=[10,60])

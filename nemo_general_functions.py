@@ -326,7 +326,6 @@ def make_ctd_netCDF(nemo_info, savedir, sbe_df, sbe_qcdf=None):
         if sbe_qcdf is None:
             print('No QARTOD data frame provided. Skipping QARTOD variables.')
         else:
-            print('Writing QARTOD variables to netCDF.')
             varnames = ['sea_water_pressure',
                         'sea_water_temperature',
                         'sea_water_electrical_conductivity',
@@ -383,6 +382,7 @@ def make_ctd_netCDF(nemo_info, savedir, sbe_df, sbe_qcdf=None):
         print(e)
         
     dataset.close()
+    print('Finished writing ctd netCDF file: ' + ctd_ncfile + '\n\n')
     
     return
 
@@ -577,7 +577,6 @@ def make_thermistor_netCDF(nemo_info, savedir, sbe_df, sbe_qcdf=None):
         if sbe_qcdf is None:
             print('No QARTOD data frame provided. Skipping QARTOD variables.')
         else:
-            print('Writing QARTOD variables to netCDF.')
             varnames = ['sea_water_temperature']
             varlabs = ['Sea Water Temperature']
             
@@ -622,5 +621,6 @@ def make_thermistor_netCDF(nemo_info, savedir, sbe_df, sbe_qcdf=None):
         print(e)
         
     dataset.close()
+    print('Finished writing thermistor netCDF file: ' + ctd_ncfile + '\n\n')
     
     return

@@ -275,7 +275,7 @@ def instrument_key(instrument_name):
 
     normalized_name = str(instrument_name).strip().lower()
     valid_instruments = {
-        'ctd': ['hcat', 'sbe37', 'sbe39', 'sbe56', 'seaphox', 'seafet'],
+        'ctd': ['wqm', 'hcat', 'sbe37', 'sbe39', 'sbe44', 'sbe56', 'seaphox', 'seafet'],
         'adcp': ['adcp']
     }
 
@@ -293,9 +293,11 @@ def _instrument_model_name(instrument_name):
 
     normalized_name = str(instrument_name).strip().lower()
     model_lookup = {
+        "wqm": "WQM",
         'hcat': 'HydroCat-EP',
         'sbe37': 'SBE37-ODO-IMP',
         'sbe39': 'SBE39',
+        'sbe44': 'SBE44',
         'sbe56': 'SBE56',
         'seaphox': 'SeaPHOX',
         'adcp': 'ADCP'
@@ -744,16 +746,17 @@ def interactive_add_deployment():
     deployment_key = _prompt_required_text('Deployment name/key: ')
     
     deployment_data = {
-        'start': _prompt_required_text('Start time (ISO, e.g., 2024-07-10T17:45:00Z): '),
-        'status': _prompt_deployment_status(required=True),
-        'latitude': _prompt_float('Latitude: ', required=True),
-        'longitude': _prompt_float('Longitude: ', required=True),
-        'depth': _prompt_int('Depth (m): ', required=True)
     }
-    
+    deployment_data['start'] = _prompt_required_text('Start time (ISO, e.g., 2024-07-10T17:45:00Z): ')
     end_time = _prompt_optional_text('End time (ISO, blank if active): ')
     if end_time is not None:
         deployment_data['end'] = end_time
+    deployment_data['status'] = _prompt_deployment_status(required=True)
+    deployment_data['latitude'] = _prompt_float('Latitude: ', required=True)
+    deployment_data['longitude'] = _prompt_float('Longitude: ', required=True)
+    deployment_data['depth'] = _prompt_int('Depth (m): ', required=True)
+    
+    
     
     instruments = _prompt_instruments()
     if len(instruments) > 0:
