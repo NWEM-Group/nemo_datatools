@@ -600,3 +600,114 @@ class AdcpPd0Record(object):
 
         self.error_word = self._unpack_bitmapped('error_word', error_word_format, self.variable_data.error_status_word)
 
+def beam_to_inst_transform(beam_angle=20, c=1):
+    
+    """
+    Creates transformation matrix for converting from beam coordinates to 
+    instrument coordinates based the beam angle.  
+    
+    beam_angle: the beam angle of the ADCP (typically either 20 or 30 degrees)
+    inst_curv:  indicates whether the instrument is concave or convex
+                inst_curv=1  indicate convex 
+                inst_curv=-1 indicate concave
+                all other values are invalid
+                Note: Nearly all ADCPs are convex (some early vessel-mounted systems were concave).
+    """
+    
+    import numpy as np
+    
+    if not((c == 1) or (c == -1)):
+        print('Invalid instrument concavity given:')
+        print('Use inst_curv=1 for convex / inst_curv=0 for concave')
+        return None
+    
+    a = 1 / (2 * np.sin(np.radians(beam_angle)))
+    b = 1 / (4 * np.cos(np.radians(beam_angle)))
+    d = a / np.sqrt(2)
+    
+    # Define the transformation matrix
+
+    ######################################
+    # Transformation matrix:
+    # ---------------------------------------------
+    # component | beam1 | beam2 | beam3 | beam4
+    # ---------------------------------------------
+    # x_inst    |  c*a  | -c*a  |   0   |   0
+    # y_inst    |   0   |   0   | -c*a |  c*a
+    # z_inst    |   b   |   b   |   b   |  b
+    # error_vel |   d   |   d   |  -d   | -d
+    #
+    # Where c = 1 for convex and c = -1 for concave
+    # a = 1 / (2 * sin(beam_angle)); a=1.4619 for angle=20, a=1.0 for angle=30
+    # b = 1 / (4 * cos(beam_angle)); b=0.266 for angle=20, b=0.2887 for angle=30
+    # d = a / sqrt(2); d=1.0337 for angle=20, 0.7071 for angle=30
+
+    trans = np.array([[c*a, -c*a,    0,   0],
+                      [  0,    0, -c*a, c*a],
+                      [  b,    b,    b,   b],
+                      [  d,    d,   -d,  -d]])
+
+    # The transformation matrix table above is the equivalent of the following matrix multiplication:
+    # |  x_inst   |   |  c*a * (beam1 - beam2) |
+    # |  y_inst   | = |  c*a * (beam4 - beam3) |
+    # |  z_inst   |   |  b * (beam1 + beam2 + beam3 + beam4) |
+    # | error_vel |   |  d * (beam1 + beam2 - beam3 - beam4) |
+    
+    return trans
+
+def inst_to_earth_transform(heading, pitch, roll, orientation):
+    
+    """
+    """
+    
+    import numpy as np
+    
+    heading_rad = np.radians(heading)
+    pitch_rad = np.radians(pitch)
+    if orientation == 'downfacing':
+        roll_rad = np.radians(roll)
+    elif orientation == 'upfacing':
+        roll_rad = np.radians([(ii+180) for ii in roll])
+    else:
+        print('Invalid instrument orientation.')
+        print('Valid inputs are "upfacing" or "downfacing"')
+        
+    heading_cosrad = np.array([np.cos(ii) for ii in heading_rad])
+    heading_sinrad = np.array([np.sin(ii) for ii in heading_rad])
+    pitch_cosrad = np.array([np.cos(ii) for ii in pitch_rad])
+    pitch_sinrad = np.array([np.sin(ii) for ii in pitch_rad])
+    roll_cosrad = np.array([np.cos(ii) for ii in roll_rad])
+    roll_sinrad = np.array([np.sin(ii) for ii in roll_rad])
+    
+    
+    # Build the heading, pitch, and roll transformation matrices
+    NT = len(heading)
+
+    heading_trans = np.zeros((NT, 4, 4))
+    heading_trans[:, 0, 0] = heading_cosrad
+    heading_trans[:, 0, 1] = heading_sinrad
+    heading_trans[:, 1, 0] = -heading_sinrad
+    heading_trans[:, 1, 1] = heading_cosrad
+    heading_trans[:, 2, 2] = 1
+    heading_trans[:, 3, 3] = 1
+
+    pitch_trans = np.zeros((NT, 4, 4))
+    pitch_trans[:, 0, 0] = 1
+    pitch_trans[:, 1, 1] = pitch_cosrad
+    pitch_trans[:, 1, 2] = -pitch_sinrad
+    pitch_trans[:, 2, 1] = pitch_sinrad
+    pitch_trans[:, 2, 2] = pitch_cosrad
+    pitch_trans[:, 3, 3] = 1
+
+    roll_trans = np.zeros((NT, 4, 4))
+    roll_trans[:, 0, 0] = roll_cosrad
+    roll_trans[:, 0, 2] = roll_sinrad
+    roll_trans[:, 1, 1] = 1
+    roll_trans[:, 2, 0] = -roll_sinrad
+    roll_trans[:, 2, 2] = roll_cosrad
+    roll_trans[:, 3, 3] = 1
+
+    trans = heading_trans @ pitch_trans @ roll_trans
+
+    
+    return trans

@@ -291,6 +291,7 @@ def adcp_regrid_ensemble(zgrid, zs_adcp, depth_xducer,
             # distance from the ADCP head and the 
             # adjusted transducer depth
             z_adcp = zs_adcp[tt]
+            
             if orientation == 'upfacing':
                 zadjust_adcp = depth_xducer[tt] - z_adcp
                 
@@ -323,10 +324,10 @@ def extract_ensemble_data(adcp_records):
     n_records = len(adcp_records)
     adcp_record = adcp_records[0]
 
-    z_adcp = np.arange(adcp_record.fixed_data.bin_1_distance/100,
-                       (adcp_record.fixed_data.bin_1_distance/100 + 
-                        adcp_record.fixed_data.number_of_cells*adcp_record.fixed_data.depth_cell_length/100),
-                        adcp_record.fixed_data.depth_cell_length/100)
+    bin_1_dist = adcp_record.fixed_data.bin_1_distance/100
+    bin_ncells = adcp_record.fixed_data.number_of_cells
+    bin_cell_length = adcp_record.fixed_data.depth_cell_length/100
+    z_adcp = bin_cell_length*np.arange(0, bin_ncells) + bin_1_dist
 
     if adcp_record.sysconfig.beam_facing == 1:
         beam_dir = 'upfacing'
@@ -363,6 +364,7 @@ def extract_ensemble_data(adcp_records):
                   'beam_transform': coord_xform,
                   'three_beams': threebeam_flag,
                   'serial_number': adcp_record.fixed_data.serial_number}
+    
 
     instr_params = {'transmit_pulse_length': adcp_record.fixed_data.transmit_pulse_length/100,
                     'low_correlation_threshold': adcp_record.fixed_data.low_corr_threshold,
@@ -406,12 +408,12 @@ def extract_ensemble_data(adcp_records):
     for ii in range(0,n_records):
 
         ens_no.append(adcp_records[ii].variable_data.ensemble_number)
-        
-        zadcp = np.arange(adcp_records[ii].fixed_data.bin_1_distance/100,
-                          (adcp_records[ii].fixed_data.bin_1_distance/100 + 
-                           adcp_records[ii].fixed_data.number_of_cells*adcp_records[ii].fixed_data.depth_cell_length/100),
-                           adcp_records[ii].fixed_data.depth_cell_length/100)
-        zadcps.append(zadcp)
+
+        bin_1_dist = adcp_records[ii].fixed_data.bin_1_distance/100
+        bin_ncells = adcp_records[ii].fixed_data.number_of_cells
+        bin_cell_length = adcp_records[ii].fixed_data.depth_cell_length/100
+        znew_adcp = bin_cell_length*np.arange(0, bin_ncells) + bin_1_dist
+        zadcps.append(znew_adcp)
 
         dtnum.append(datetime.datetime(2000+adcp_records[ii].variable_data.rtc_year,
                                        adcp_records[ii].variable_data.rtc_month,
@@ -448,7 +450,7 @@ def extract_ensemble_data(adcp_records):
                           for ii in adcp_records[ii].velocities.beam3])
         
         
-        if threebeam_flag:
+        if not(threebeam_flag):
             corr_beam4.append(adcp_records[ii].correlation_magnitudes.beam4)
             echo_beam4.append(adcp_records[ii].echo_intensity.beam4)
             vel_beam4.append([np.nan if abs(ii) == 32768 else ii/1000 
@@ -852,7 +854,6 @@ def extract_adcp_full_records(adcp_files: str, datadir: str, rd_bytes: int = Non
                 test = adcp_funcs.AdcpPd0Record(f.read(10000))
             rd_bytes = test.header.num_bytes + 2
         lines = []
-        
         with open(os.path.join(datadir,adcp_file), mode='rb') as f:
             while True:
                 try:
@@ -1136,66 +1137,120 @@ def buoy_adcp_wrapper(buoy_name, deployment_name, instrument_name='adcp', serial
      depth_xducer, soundvel, xducer_temp, 
      corr_beam1, corr_beam2, corr_beam3, corr_beam4,
      echo_beam1, echo_beam2, echo_beam3, echo_beam4,
-     vel_beam1, vel_beam2, vel_beam3, vel_beam4] = extract_ensemble_data(adcp_records)   
+     vel_beam1, vel_beam2, vel_beam3, vel_beam4] = extract_ensemble_data(adcp_records)
+    print(sys_config)
     if status == 'recovered':
         adcp_timestamps = dtnum 
+
+    if sys_config['beam_transform'] != 'earth':
+
+        if sys_config['beam_transform'] == 'beam':
+            beam_angle = sys_config['beam_angle']
+            if sys_config['beam_pattern'] == 'convex':
+                beam_pattern = 1
+            elif sys_config['beam_pattern'] == 'concave':
+                beam_pattern = -1
+            else:
+                beam_pattern = 0
+            beam_direction = sys_config['beam_direction']
+
+            beam2inst = adcp_funcs.beam_to_inst_transform(beam_angle, c=beam_pattern)
+            inst2earth = adcp_funcs.inst_to_earth_transform(heading, pitch, roll, 
+                                                            orientation=beam_direction)
+
+            vel_earth = np.einsum('tij,tzj->tzi', inst2earth, 
+                                  np.stack([vel_beam1, vel_beam2, vel_beam3, vel_beam4], 
+                                           axis=-1) @ beam2inst.T)
+            vel_beam1 = vel_earth[:, :, 0]
+            vel_beam2 = vel_earth[:, :, 1]
+            vel_beam3 = vel_earth[:, :, 2]
+            vel_beam4 = vel_earth[:, :, 3]
+
+            del vel_earth, inst2earth, beam2inst
+
+        if sys_config['beam_transform'] == 'instrument':
+
+            inst2earth = adcp_funcs.inst_to_earth_transform(heading, pitch, roll, 
+                                                            orientation=beam_direction)
+
+            vel_earth = np.einsum('tij,tzj->tzi', inst2earth, 
+                                  np.stack([vel_beam1, vel_beam2, vel_beam3, vel_beam4], 
+                                           axis=-1))
+            vel_beam1 = vel_earth[:, :, 0]
+            vel_beam2 = vel_earth[:, :, 1]
+            vel_beam3 = vel_earth[:, :, 2]
+            vel_beam4 = vel_earth[:, :, 3]
+
+            del vel_earth, inst2earth
+
+        else:
+            print('   ...Beam transform is not in "beam", "instrument", or "earth". Cannot process the data. STOP...')
+            return
 
 
     #######################################
     # Adjust the depth/location of the data
     #
 
-    depth_xducer = recalc_xducer_depth(depth_xducer, instr_params, lat)
-    z_adcp = zs_adcp[0]
+    
+    depth_xducer = recalc_xducer_depth(depth_xducer, instr_params, lat)    
+    depth_xducer = pd.Series(index=dtnum, data=depth_xducer).interpolate(method='time', limit=3, limit_direction='both').to_numpy()
+    depth_xducer = pd.Series(index=dtnum, data=depth_xducer).rolling(window='1H', center=True, min_periods=1).mean().to_numpy()
+    depth_xducer = np.round(depth_xducer, 2)
+    depth_xducer[depth_xducer <= 0] = np.nan
+    
+    zbase_adcp = zs_adcp[0]
     if sys_config['beam_direction'] == 'upfacing':
-        zadjust_adcp = np.median(depth_xducer) - z_adcp
+        zadjust_adcp = np.nanmedian(depth_xducer) - zbase_adcp
     elif sys_config['beam_direction'] == 'downfacing':
-        zadjust_adcp = np.median(depth_xducer) + z_adcp
+        zadjust_adcp = np.nanmedian(depth_xducer) + zbase_adcp
     maxz = np.max(zadjust_adcp)
 
 
     print('   ...Null out the bad values when the signal is contaminated by beam reflection')
-    if sys_config['beam_direction'] == 'upfacing':
-        # Identify a distance below the surface where we can
-        # assume beam reflection is contaminating the signal,
-        # and find all indices above this depth
-        reflect_depthinds = np.where(zadjust_adcp < 0)
+    prenull_reflection = False
+    if prenull_reflection:
+        if sys_config['beam_direction'] == 'upfacing':
+            # Identify a distance below the surface where we can
+            # assume beam reflection is contaminating the signal,
+            # and find all indices above this depth
+            reflect_depthinds = np.where(zadjust_adcp < 0)
 
-        corr_beam1[:, reflect_depthinds[0][0]:] = 0
-        corr_beam2[:, reflect_depthinds[0][0]:] = 0
-        corr_beam3[:, reflect_depthinds[0][0]:] = 0
-        corr_beam4[:, reflect_depthinds[0][0]:] = 0
+            corr_beam1[:, reflect_depthinds[0][0]:] = 0
+            corr_beam2[:, reflect_depthinds[0][0]:] = 0
+            corr_beam3[:, reflect_depthinds[0][0]:] = 0
+            corr_beam4[:, reflect_depthinds[0][0]:] = 0
 
-        echo_beam1[:, reflect_depthinds[0][0]:] = 0
-        echo_beam2[:, reflect_depthinds[0][0]:] = 0
-        echo_beam3[:, reflect_depthinds[0][0]:] = 0
-        echo_beam4[:, reflect_depthinds[0][0]:] = 0
+            echo_beam1[:, reflect_depthinds[0][0]:] = 0
+            echo_beam2[:, reflect_depthinds[0][0]:] = 0
+            echo_beam3[:, reflect_depthinds[0][0]:] = 0
+            echo_beam4[:, reflect_depthinds[0][0]:] = 0
 
-        vel_beam1[:, reflect_depthinds[0][0]:] = np.nan
-        vel_beam2[:, reflect_depthinds[0][0]:] = np.nan
-        vel_beam3[:, reflect_depthinds[0][0]:] = np.nan
-        vel_beam4[:, reflect_depthinds[0][0]:] = np.nan
-    elif sys_config['beam_direction'] == 'downfacing':
+            vel_beam1[:, reflect_depthinds[0][0]:] = np.nan
+            vel_beam2[:, reflect_depthinds[0][0]:] = np.nan
+            vel_beam3[:, reflect_depthinds[0][0]:] = np.nan
+            vel_beam4[:, reflect_depthinds[0][0]:] = np.nan
+        elif sys_config['beam_direction'] == 'downfacing':
 
-        # Identify a distance near the bottom where we can
-        # assume beam reflection is contaminating the signal,
-        # and find all indices above this depth
-        reflect_depthinds = np.where(zadjust_adcp > depth)
+            # Identify a distance near the bottom where we can
+            # assume beam reflection is contaminating the signal,
+            # and find all indices above this depth
+            reflect_depthinds = np.where(zadjust_adcp > depth)
 
-        corr_beam1[:, reflect_depthinds[0][0]:] = 0
-        corr_beam2[:, reflect_depthinds[0][0]:] = 0
-        corr_beam3[:, reflect_depthinds[0][0]:] = 0
-        corr_beam4[:, reflect_depthinds[0][0]:] = 0
+            corr_beam1[:, reflect_depthinds[0][0]:] = 0
+            corr_beam2[:, reflect_depthinds[0][0]:] = 0
+            corr_beam3[:, reflect_depthinds[0][0]:] = 0
+            corr_beam4[:, reflect_depthinds[0][0]:] = 0
 
-        echo_beam1[:, reflect_depthinds[0][0]:] = 0
-        echo_beam2[:, reflect_depthinds[0][0]:] = 0
-        echo_beam3[:, reflect_depthinds[0][0]:] = 0
-        echo_beam4[:, reflect_depthinds[0][0]:] = 0
+            echo_beam1[:, reflect_depthinds[0][0]:] = 0
+            echo_beam2[:, reflect_depthinds[0][0]:] = 0
+            echo_beam3[:, reflect_depthinds[0][0]:] = 0
+            echo_beam4[:, reflect_depthinds[0][0]:] = 0
 
-        vel_beam1[:, reflect_depthinds[0][0]:] = np.nan
-        vel_beam2[:, reflect_depthinds[0][0]:] = np.nan
-        vel_beam3[:, reflect_depthinds[0][0]:] = np.nan
-        vel_beam4[:, reflect_depthinds[0][0]:] = np.nan
+            vel_beam1[:, reflect_depthinds[0][0]:] = np.nan
+            vel_beam2[:, reflect_depthinds[0][0]:] = np.nan
+            vel_beam3[:, reflect_depthinds[0][0]:] = np.nan
+            vel_beam4[:, reflect_depthinds[0][0]:] = np.nan
 
 
 
@@ -1222,7 +1277,7 @@ def buoy_adcp_wrapper(buoy_name, deployment_name, instrument_name='adcp', serial
     # Interpolate the beams onto gridded depths
 
     print('   ...Interpolate the beams onto gridded depths')
-    zstep = np.nanmax([1,np.round(np.mean(np.diff(zs_adcp)),1)])
+    zstep = np.nanmax([1,np.round(np.mean(np.diff(zbase_adcp)),1)])
     if target_depth is not None:
         ztarget = target_depth
     else:
@@ -1265,8 +1320,8 @@ def buoy_adcp_wrapper(buoy_name, deployment_name, instrument_name='adcp', serial
     # Null out values above the reflection depth  
     print('   ...Null out values above the reflection depth')
     if sys_config['beam_direction'] == 'upfacing':
-        z_abs = [np.median(depth_xducer) - ii for ii in zs_adcp[0]]
-        reflect_depth = 0.07*np.median(depth_xducer)
+        z_abs = [np.nanmedian(depth_xducer) - ii for ii in zs_adcp[0]]
+        reflect_depth = 0.07*np.nanmedian(depth_xducer)
         reflect_depthinds = np.where(zgrid < reflect_depth)    
 
         vel_beam1_regrid[:, :reflect_depthinds[0][-1]+1] = np.nan
@@ -1286,8 +1341,8 @@ def buoy_adcp_wrapper(buoy_name, deployment_name, instrument_name='adcp', serial
 
     elif sys_config['beam_direction'] == 'downfacing':
 
-        z_abs = [np.median(depth_xducer) + ii for ii in zs_adcp[0]]
-        reflect_depth = (1-0.07)*np.median(depth)
+        z_abs = [np.nanmedian(depth_xducer) + ii for ii in zs_adcp[0]]
+        reflect_depth = (1-0.07)*np.nanmedian(depth)
         reflect_depthinds = np.where(zgrid > reflect_depth)   
 
         vel_beam1_regrid[:, reflect_depthinds[0][-1]:] = np.nan
@@ -1319,9 +1374,26 @@ def buoy_adcp_wrapper(buoy_name, deployment_name, instrument_name='adcp', serial
                  'Depth': depth,
                  "avg_mag_dec": np.round(avg_mag_dec,4),
                  'institution_info': deployment_info.get('institution_info', {}),
-                 'InstrumentType': 'sbe56',
+                 'InstrumentType': 'adcp',
                  'InstrumentInfo': instrument_info}
 
+    # Apply time drift correction if necessary
+    if (status == 'recovered') and (instrument_info.get('time_drift_secs', False)):
+        sample_time = pd.to_datetime(adcp_timestamps.copy())
+
+        drift_seconds = instrument_info.get('time_drift_secs', 0)
+        inst_start_time = datetime.datetime.strptime(instrument_info.get('start_time', None), '%Y-%m-%dT%H:%M:%SZ') if instrument_info.get('start_time', None) else None
+        inst_end_time = datetime.datetime.strptime(instrument_info.get('end_time', None), '%Y-%m-%dT%H:%M:%SZ') if instrument_info.get('end_time', None) else None
+        timerange = (inst_end_time - inst_start_time).total_seconds() if inst_start_time and inst_end_time else 0
+        drift_rate = drift_seconds / timerange if timerange > 0 else 0
+        print(f'   Applying time drift correction of {drift_seconds} seconds over {timerange} seconds ({drift_rate} seconds per second).')
+        # Apply a linear drift correction across the time range of the data
+        drift_seconds = drift_rate * (sample_time - inst_start_time).total_seconds()
+        adcp_timestamps = sample_time - pd.to_timedelta(drift_seconds, unit="s")
+        adcp_timestamps = [ii.to_pydatetime() for ii in adcp_timestamps]
+
+
+    # Build an xarray dataset with the ADCP data
     adcp_xrnew = make_adcp_xr(savefile, buoy_name, deployment_name, lat, lon, depth,
                               adcp_timestamps, sys_config, nemo_info, instr_params, zgrid,
                               ens_no, dtnum, heading, 
@@ -1344,20 +1416,6 @@ def buoy_adcp_wrapper(buoy_name, deployment_name, instrument_name='adcp', serial
     else:
         adcp_xr = adcp_xrnew
 
-
-    # Apply time drift correction if necessary
-    if (status == 'recovered') and (instrument_info.get('time_drift_secs', False)):
-        drift_seconds = instrument_info.get('time_drift_secs', 0)
-        inst_start_time = datetime.datetime.strptime(instrument_info.get('start_time', None), '%Y-%m-%dT%H:%M:%SZ') if instrument_info.get('start_time', None) else None
-        inst_end_time = datetime.datetime.strptime(instrument_info.get('end_time', None), '%Y-%m-%dT%H:%M:%SZ') if instrument_info.get('end_time', None) else None
-        sample_time = adcp_xr['time'].to_pandas()
-        timerange = (inst_end_time - inst_start_time).total_seconds() if inst_start_time and inst_end_time else 0
-        drift_rate = drift_seconds / timerange if timerange > 0 else 0
-        print(f'   Applying time drift correction of {drift_seconds} seconds over {timerange} seconds ({drift_rate} seconds per second).')
-
-        # Apply a linear drift correction across the time range of the data
-        sample_time = sample_time - pd.to_timedelta(drift_rate * (sample_time - inst_start_time).total_seconds(), unit='s')
-        adcp_xr['time'] = ('time', sample_time)
 
     # Restrict the dataset to the deployment window
     if start_deployment is not None:
@@ -1475,11 +1533,9 @@ def _parse_average_windows(average_text):
 
 def main():
     import argparse
-    parser = argparse.ArgumentParser(description='Process ADCP data for a lander deployment')
+    parser = argparse.ArgumentParser(description='Process ADCP data for a buoy deployment')
     parser.add_argument('--buoy', type=str,
                         help='Buoy name to process')
-    parser.add_argument('--lander', type=str,
-                        help='Lander name (legacy alias for --buoy)')
     parser.add_argument('--deployment', type=str, required=True,
                         help='Deployment name')
     parser.add_argument('--instrument', type=str,
@@ -1489,9 +1545,9 @@ def main():
     parser.add_argument('--averages', type=str,
                         help='Optional comma-separated averaging windows in minutes (e.g., 10,60)')
     args = parser.parse_args()
-    buoy_name = args.buoy if args.buoy is not None else args.lander
+    buoy_name = args.buoy
     if buoy_name is None:
-        raise ValueError('Either --buoy or --lander is required.')
+        raise ValueError('The --buoy argument is required.')
     average_windows = _parse_average_windows(args.averages)
     buoy_adcp_wrapper(buoy_name, args.deployment, args.instrument, args.serial, average_windows)
 
