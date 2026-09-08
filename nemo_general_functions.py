@@ -3,6 +3,23 @@
 # Buoy and instrument information functions #
 #############################################
 
+def get_mpkpaths(buoy_name, status=None):
+
+    import os
+    import json
+    
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    pathdirs_path = os.path.join(script_dir, 'info_jsons', 'pathdirs.json')
+    
+    with open(pathdirs_path, 'r') as f:
+        pathdirs_info = json.load(f)
+
+    basedir = pathdirs_info.get('basedir')
+    datadir = pathdirs_info.get('mpk_path')
+    savedir = pathdirs_info.get('mpk_output')
+
+    return basedir, datadir, savedir
+
 
 def get_datalocations(buoy_name, deployment_name, inst_type, status=None):
 
@@ -40,12 +57,18 @@ def get_datalocations(buoy_name, deployment_name, inst_type, status=None):
                 if not(os.path.exists(savedir)):
                     print(f"Creating directory for saving data: {savedir}")
                     os.makedirs(savedir, exist_ok=True)
-
-
-
-
     
     return datadir, savedir
+
+def get_deployment_info(buoy_designation, basedir):
+    import os
+    import json
+    
+    depinfo_path = os.path.join(basedir, 'deployment_info', buoy_designation.lower() + '_depinfo.json')
+    with open(depinfo_path, 'r') as file:
+        depinfo = json.load(file)
+    
+    return depinfo
 
 ##################################
 # netCDF Functions               #
