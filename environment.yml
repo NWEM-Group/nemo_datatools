@@ -9,6 +9,14 @@ dependencies:
   - netcdf4
   - gsw
   - matplotlib
+  - scipy
+  - requests
+  - python-dateutil
+  - paramiko
+  - cmocean
+  - msgpack-python
+  - cartopy
+  - erddapy
   - ioos_qc
   - pip
   - pip:
