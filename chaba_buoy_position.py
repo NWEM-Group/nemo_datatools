@@ -242,6 +242,11 @@ def check_buoy_and_plot(ChaBa_lon, ChaBa_lat, testdist=150):
     topo_snapshot = nemo.get_erddap_data(erddap_url, topo_dataset, 
                                           data_protocol='griddap', 
                                           variables=None, constraints=constraints)
+    if topo_snapshot is None:
+        print(datetime.datetime.now().strftime('%Y-%b-%d %H:%M') + ': Failed to download topographic data.')
+        return
+    else:
+        print(datetime.datetime.now().strftime('%Y-%b-%d %H:%M') + ': Topographic data download successful.')
     
     
     # Define ChaBa buoy location
