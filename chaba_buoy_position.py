@@ -8,6 +8,7 @@ from erddapy import ERDDAP
 import json
 
 import matplotlib
+matplotlib.use('Agg')
 from matplotlib import pyplot as plt
 from matplotlib import patheffects
 
@@ -115,12 +116,19 @@ def load_gpsfile(time_lookback=3):
     if {'lon', 'lat', 'timestamp'}.issubset(gps.columns):
         gps_lon = gps['lon'].to_numpy(dtype=float).squeeze()
         gps_lat = gps['lat'].to_numpy(dtype=float).squeeze()
-        gps_hdop = gps['hdop'].to_numpy(dtype=float).squeeze()
         gps_timesecs = (gps['timestamp'].to_numpy(dtype=float).squeeze())/1e9
+        if 'hdop' in gps.columns:
+            gps_hdop = gps['hdop'].to_numpy(dtype=float).squeeze()
+        else:
+            gps_hdop = np.full(gps_lon.shape, np.nan, dtype=float)
     elif {'longitude (degrees)', 'latitude (degrees)', 'time (seconds)'}.issubset(gps.columns):
         gps_lon = gps['longitude (degrees)'].to_numpy(dtype=float).squeeze()
         gps_lat = gps['latitude (degrees)'].to_numpy(dtype=float).squeeze()
         gps_timesecs = gps['time (seconds)'].to_numpy(dtype=float).squeeze()
+        if 'hdop' in gps.columns:
+            gps_hdop = gps['hdop'].to_numpy(dtype=float).squeeze()
+        else:
+            gps_hdop = np.full(gps_lon.shape, np.nan, dtype=float)
     else:
         raise ValueError('Unable to parse gps csv columns in files from: ' + gps_dir)
 
@@ -133,10 +141,11 @@ def load_gpsfile(time_lookback=3):
     # The HDOP gives the horizontal dilution of precision, which indicates the quality of the GPS fix.
     # Lower HDOP values correspond to higher accuracy, while higher values indicate lower accuracy.
     # Filter out GPS points with poor HDOP values (e.g., HDOP > 5)
-    gps_lon = gps_lon[gps_hdop <= 5]
-    gps_lat = gps_lat[gps_hdop <= 5]
-    gps_timesecs = gps_timesecs[gps_hdop <= 5]
-    gps_hdop = gps_hdop[gps_hdop <= 5]
+    hdop_keepmask = np.isnan(gps_hdop) | (gps_hdop <= 5)
+    gps_lon = gps_lon[hdop_keepmask]
+    gps_lat = gps_lat[hdop_keepmask]
+    gps_timesecs = gps_timesecs[hdop_keepmask]
+    gps_hdop = gps_hdop[hdop_keepmask]
 
 
     # Convert GPS timestamps from seconds since epoch to datetime objects
@@ -399,10 +408,10 @@ def check_buoy_and_plot(ChaBa_lon, ChaBa_lat, testdist=150):
 
 
     # Plot the geofence radius circles
-    ax2.plot(circ_xtrans, circ_ytrans,'--w', 
-             label='150m radius')
+    ax2.plot(circ_xtrans, circ_ytrans,'--w',
+             label=f'{int(testdist)}m radius')
     ax2.plot(circ2_xtrans, circ2_ytrans,'--w', 
-             linewidth=0.5, label='300m radius')
+             linewidth=0.5, label=f'{int(2*testdist)}m radius')
 
     # Add the GPS locations
     cb=ax2.scatter(gps_lontrans, gps_lattrans, s=gps_timescale, 
@@ -431,10 +440,10 @@ def check_buoy_and_plot(ChaBa_lon, ChaBa_lat, testdist=150):
     
     # Time series of distance from deployment
     ax3.plot(gps_time, gps_dists, '*--', markersize=2, linewidth=0.5)
-    ax3.plot([gps_time[0], gps_time[-1]], [150, 150], '--', linewidth=0.5)
-    ax3.plot([gps_time[0], gps_time[-1]], [300, 300], '--', linewidth=1.5)
+    ax3.plot([gps_time[0], gps_time[-1]], [testdist, testdist], '--', linewidth=0.5)
+    ax3.plot([gps_time[0], gps_time[-1]], [2*testdist, 2*testdist], '--', linewidth=1.5)
     ax3.set_xlim([gps_time[0], gps_time[-1]])
-    ax3.set_ylim([0, max([350,np.ceil(max(gps_dists)/10)*10])])
+    ax3.set_ylim([0, max([2*testdist + 50, np.ceil(max(gps_dists)/10)*10])])
     ax3.set_ylabel('Distance from\ndeployment location\n(meters)', 
                    fontsize=8)
     ax3.yaxis.set_tick_params(labelsize=8)
@@ -526,7 +535,8 @@ def check_buoy_and_plot(ChaBa_lon, ChaBa_lat, testdist=150):
     # and if necessary, send an email to the team
     check_buoy_position(gps_lon, gps_lat, gps_time, gps_hdop, 
                         ChaBa_lon, ChaBa_lat, 
-                        attachment_file=os.path.join(savedir,figname))
+                        attachment_file=os.path.join(savedir,figname),
+                        target_dist=testdist)
 
 
 # In[ ]:
@@ -556,7 +566,7 @@ def check_buoy_position(gps_lon, gps_lat, gps_time, gps_hdop,
         if len(faroutside_inds) > 0:
             good_faroutside_inds = faroutside_inds[gps_hdop[faroutside_inds] < 2]
         else:
-            good_outside_inds = []
+            good_faroutside_inds = []
         
         outside_inds = np.where(gps_dists > target_dist)[0]
         if len(outside_inds) > 0:
@@ -573,7 +583,7 @@ def check_buoy_position(gps_lon, gps_lat, gps_time, gps_hdop,
             send_message = True
         elif ((len(faroutside_inds) > 3 and gps_time[faroutside_inds[-1]] > checktime)
               or
-              (len(outside_inds) > 6 and gps_time[outside_inds[-1] > checktime])):
+              (len(outside_inds) > 6 and gps_time[outside_inds[-1]] > checktime)):
             send_message = True
             
         msgtxt = ("""
@@ -584,7 +594,8 @@ def check_buoy_position(gps_lon, gps_lat, gps_time, gps_hdop,
         \n\nFor more information, please view attachment, or view the file online at:\n
         https://nwem.apl.washington.edu/figures/ChaBa_LatestPosition.png""")
         
-        subj = 'ALERT: CHABA HAS BROKEN FREE (>300 meters from target)'
+        subj = ('ALERT: CHABA HAS BROKEN FREE (>' +
+                str(int(2*target_dist)) + ' meters from target)')
         
     elif any(gps_dists > target_dist):
         
@@ -607,7 +618,8 @@ def check_buoy_position(gps_lon, gps_lat, gps_time, gps_hdop,
         \n\nFor more information, please view attachment, or view the file online at:\n
         https://nwem.apl.washington.edu/figures/ChaBa_LatestPosition.png""")
         
-        subj = 'ALERT: CHABA HAS LIKELY BROKEN FREE (>150 meters from target)'
+        subj = ('ALERT: CHABA HAS LIKELY BROKEN FREE (>' +
+                str(int(target_dist)) + ' meters from target)')
     
     
     
