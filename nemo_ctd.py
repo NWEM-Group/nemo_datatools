@@ -76,9 +76,7 @@ def drop_nondeploy_inds(data_df, dep_starttime, dep_endtime):
 
         dropinds = np.where(np.logical_not(np.logical_and(data_df['time'] >= dep_starttime,
                                                           data_df['time'] <= dep_endtime)))[0]
-        data_df.drop(index=dropinds, inplace=True)
-
-        data_df = data_df.reset_index(drop=True)
+        data_df = data_df.drop(index=dropinds).reset_index(drop=True)
 
     return data_df
 
@@ -251,12 +249,12 @@ def process_sbe37data(sbe37_df, depinfo, instinfo, timePeriod='recent'):
         sbe37_df['salinity'] = gsw.SP_from_C([(ii*1000/100) for ii in sbe37_df['conductivity']],
                                              sbe37_df['temperature'], sbe37_df['pressure'])
 
-    sbe37_df.rename({'conductivity': 'sea_water_electrical_conductivity', 
-                     'temperature': 'sea_water_temperature', 
-                     'salinity': 'sea_water_practical_salinity', 
-                     'pressure': 'sea_water_pressure',
-                     oxycol: 'mass_concentration_of_oxygen_in_sea_water'},
-                   axis=1, inplace=True)     
+    sbe37_df = sbe37_df.rename({'conductivity': 'sea_water_electrical_conductivity', 
+                                'temperature': 'sea_water_temperature', 
+                                'salinity': 'sea_water_practical_salinity', 
+                                'pressure': 'sea_water_pressure',
+                                oxycol: 'mass_concentration_of_oxygen_in_sea_water'},
+                               axis=1)
 
 
     # Per Sea-Bird Application Note 64 (Rev Jun 2013)
@@ -328,9 +326,9 @@ def process_ecov2data(ecov2_df, depinfo, instinfo, timePeriod='recent'):
                          for ii in range(0,len(ecov2_df))]
 
     # Rename the hydrocat variable names
-    ecov2_df.rename({'bs': 'sea_water_turbidity', 
-                     'chl': 'mass_concentration_of_chlorophyll_a_in_sea_water'},
-                    axis=1, inplace=True)
+    ecov2_df = ecov2_df.rename({'bs': 'sea_water_turbidity', 
+                                'chl': 'mass_concentration_of_chlorophyll_a_in_sea_water'},
+                               axis=1)
 
     dep_starttime = datetime.datetime.strptime(depinfo['start'],'%Y-%m-%dT%H:%M:%SZ')
     dep_endtime = (datetime.datetime.strptime(depinfo['end'],'%Y-%m-%dT%H:%M:%SZ') if depinfo['end'] else 
@@ -399,13 +397,13 @@ def process_seaphoxdata(seaphox_df, depinfo, instinfo, timePeriod='recent'):
 
 
     # Rename the hydrocat variable names
-    seaphox_df.rename({'time': 'time', 
-                       oxycol:'mass_concentration_of_oxygen_in_sea_water',
-                       'temperature': 'sea_water_temperature', 
-                       'pressure': 'sea_water_pressure',
-                       'salinity': 'sea_water_practical_salinity', 
-                       'external_pH': 'sea_water_ph_reported_on_total_scale'},
-                    axis=1, inplace=True)
+    seaphox_df = seaphox_df.rename({'time': 'time', 
+                                    oxycol:'mass_concentration_of_oxygen_in_sea_water',
+                                    'temperature': 'sea_water_temperature', 
+                                    'pressure': 'sea_water_pressure',
+                                    'salinity': 'sea_water_practical_salinity', 
+                                    'external_pH': 'sea_water_ph_reported_on_total_scale'},
+                                   axis=1)
 
     # Use temperature and salinity to calculate potential density
     cond = gsw.C_from_SP(seaphox_df['sea_water_practical_salinity'],
@@ -619,7 +617,7 @@ def process_hydroqartod_tests(var_data, sensor_names, depth_level,
                 if ((sensor == 'mass_concentration_of_chlorophyll_a_in_sea_water')
                     or
                     (sensor == 'sea_water_turbidity')):
-                    temp_vardata = np.log10(np.ndarray.flatten(var_data.loc[:,sensor].to_numpy()))
+                    temp_vardata = np.array([np.log10(ii) if ii > 0 else np.nan for ii in np.ndarray.flatten(var_data.loc[:,sensor].to_numpy())])
                 else:
                     temp_vardata = np.ndarray.flatten(var_data.loc[:,sensor].to_numpy())
                 
@@ -636,8 +634,8 @@ def process_hydroqartod_tests(var_data, sensor_names, depth_level,
 
                 # If necessary, rename the rollup qc column to include the sensor name
                 if 'qartod_rollup_qc' in temp_qartod_df.columns:
-                    temp_qartod_df.rename({'qartod_rollup_qc':sensor+'_qc_aggregate'},
-                                          axis=1,inplace = True)
+                    temp_qartod_df = temp_qartod_df.rename({'qartod_rollup_qc':sensor+'_qc_aggregate'},
+                                                           axis=1)
 
             
             else:
@@ -1447,8 +1445,6 @@ def write_ctd_netcdf(savedir, save_filename, ds):
     
     # Write the initial data
     print('   Saving file: ' + save_filename)
-    if 'imm-ctd' in save_filename:
-        print(ds.variables['sea_water_temperature'])
     ds.drop_vars('time', errors='ignore').to_netcdf(os.path.join(savedir,save_filename))
     
     # Calculate the shifted time values
@@ -1544,7 +1540,10 @@ def merge_ctd_datasets(ctd_data, ctd_qc, ctd_latest):
     for col in finalctd_df.columns:
         if 'time' in col:
             continue
-        finalctd_df.loc[finalctd_df[col].isna(),col] = -555
+        fill_val = 'unknown' if pd.api.types.is_string_dtype(finalctd_df[col].dtype) else -555
+        if fill_val == 'unknown':
+            print('Fill with string for column', col)
+        finalctd_df.loc[finalctd_df[col].isna(),col] = fill_val
 
     return finalctd_df, finalctd_qcdf
 
@@ -1844,4 +1843,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
