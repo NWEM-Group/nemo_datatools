@@ -506,8 +506,8 @@ def check_buoy_and_plot(ChaBa_lon, ChaBa_lat, testdist=150):
 
 
     # Save the figure
-    if '/hdd0/orca/' in os.getcwd():
-        savedir = '/var/www/htdocs/figures/'
+    if '/hdd0/nemo/' in os.getcwd():
+        savedir = '/var/www/htdocs/figures/buoy_positions/'
     else:
         savedir = 'C:/Users/APLUser/NEMO_Data/'
     figname = 'ChaBa_LatestPosition.png'
