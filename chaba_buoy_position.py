@@ -15,6 +15,7 @@ from matplotlib import patheffects
 import cartopy
 import cartopy.io.img_tiles as cimgt
 import cartopy.crs as ccrs
+from cartopy.mpl.ticker import LongitudeFormatter, LatitudeFormatter
 
 import cmocean
 
@@ -379,8 +380,8 @@ def check_buoy_and_plot(ChaBa_lon, ChaBa_lat, testdist=150):
     gl1.ylocator = matplotlib.ticker.FixedLocator([47.2, 47.6, 48.0, 48.4, 48.8])
     gl1.xlocator = matplotlib.ticker.FixedLocator([-125.5, -125.25, -125, -124.75, -124.5, -124.25,
                                                    -124, -123.75, -123.5])
-    gl1.xformatter = cartopy.mpl.gridliner.LongitudeFormatter
-    gl1.yformatter = cartopy.mpl.gridliner.LatitudeFormatter
+    gl1.xformatter = LongitudeFormatter()
+    gl1.yformatter = LatitudeFormatter()
     gl1.xlabel_style = {'size': 8, 'color': 'k'}
     gl1.ylabel_style = {'size': 8, 'color': 'k'}
 
@@ -431,8 +432,8 @@ def check_buoy_and_plot(ChaBa_lon, ChaBa_lat, testdist=150):
                                                             np.ceil(1000*bounds['chaba'][3])/1000+0.003,0.003).squeeze().tolist())
     gl2.xlocator = matplotlib.ticker.FixedLocator(np.arange(np.floor(1000*bounds['chaba'][0])/1000,
                                                             np.ceil(1000*bounds['chaba'][1])/1000+0.003,0.003).squeeze().tolist())
-    gl2.xformatter = cartopy.mpl.gridliner.LongitudeFormatter
-    gl2.yformatter = cartopy.mpl.gridliner.LatitudeFormatter
+    gl2.xformatter = LongitudeFormatter()
+    gl2.yformatter = LatitudeFormatter()
     gl2.xlabel_style = {'size': 8, 'color': 'k'}
     gl2.ylabel_style = {'size': 8, 'color': 'k', 'rotation': 25}
     
