@@ -13,3 +13,11 @@ info_jsons/user_info - Copy.json
 info_jsons/pathdirs - Copy.json
 info_jsons/pathdirs.json
 info_jsons/user_info.json
+*.csv
+*.pyc
+info_jsons/pathdirs.json
+info_jsons/user_info.json
+info_jsons/deployments/chaba_deployments.json
+info_jsons/pathdirs.json
+info_jsons/user_info.json
+info_jsons/deployments/chaba_deployments.json
