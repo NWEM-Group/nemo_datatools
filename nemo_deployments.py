@@ -275,7 +275,7 @@ def instrument_key(instrument_name):
 
     normalized_name = str(instrument_name).strip().lower()
     valid_instruments = {
-        'ctd': ['wqm', 'hcat', 'sbe37', 'sbe39', 'sbe44', 'sbe56', 'seaphox', 'seafet'],
+        'ctd': ['wqm', 'hcat', 'sbe37', 'sbe39', 'sbe44', 'sbe56', 'seaphox', 'seafet', 'ecov2'],
         'adcp': ['adcp']
     }
 

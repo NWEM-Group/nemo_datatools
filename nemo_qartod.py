@@ -201,14 +201,257 @@ def load_sensor_qartod_config(instrument_model, sensor, target_depth, sample_rat
         
     return config
 
-def run_qartod_tests(var_df, instrument_model, sensor, target_depth, sample_rate):
+
+def load_metsensor_orca20_qartod_config(sensor, sample_rate=None):
+    
+    config = {}
+    if sample_rate >= 0.5:
+        # If the sample rate (given in Hz) is greater than
+        # 1 sample every 2 seconds, then assume that the
+        # we are using the full dataset
+        fulldata_flag = True
+    else:
+        # Otherwise, assume we are using the
+        # burst-averaged dataset
+        fulldata_flag = False
+    
+    ## Vaisala Wind
+    if sensor == 'air_temperature':        
+        config = {
+                "air_temperature": {
+                    "qartod": {
+                        "gross_range_test": {
+                            "suspect_span": [-20,50],
+                            "fail_span": [-30,60]},
+                        "spike_test": {
+                            "suspect_threshold": 2,
+                            "fail_threshold": 5},
+                        "rate_of_change_test": {
+                            "threshold": 10/(60*60)},
+                        "flat_line_test": {
+                            "tolerance": 0.01,
+                            "suspect_threshold": 30*60,
+                            "fail_threshold": 60*60}
+                    }
+                }
+            }
+        if fulldata_flag:
+            config['air_temperature']['qartod']['spike_test']['suspect_threshold'] = 0.2
+            config['air_temperature']['qartod']['spike_test']['fail_threshold'] = 0.5
+            del config['air_temperature']['qartod']['rate_of_change_test']
+            del config['air_temperature']['qartod']['flat_line_test']
+    elif sensor == 'dew_point_temperature':
+        config = {
+                "dew_point_temperature": {
+                    "qartod": {
+                        "gross_range_test": {
+                            "suspect_span": [-20,50],
+                            "fail_span": [-30,60]},
+                        "spike_test": {
+                            "suspect_threshold": 2,
+                            "fail_threshold": 5},
+                        "rate_of_change_test": {
+                            "threshold": 10/(60*60)},
+                        "flat_line_test": {
+                            "tolerance": 0.01,
+                            "suspect_threshold": 30*60,
+                            "fail_threshold": 60*60}
+                    }
+                }
+            }
+        if fulldata_flag:
+            config['dew_point_temperature']['qartod']['spike_test']['suspect_threshold'] = 0.2
+            config['dew_point_temperature']['qartod']['spike_test']['fail_threshold'] = 0.5
+            del config['dew_point_temperature']['qartod']['rate_of_change_test']
+            del config['dew_point_temperature']['qartod']['flat_line_test']
+    
+    elif sensor == 'wind_speed':        
+        config = {
+                "wind_speed": {
+                    "qartod": {
+                        "gross_range_test": {
+                            "suspect_span": [0,50],
+                            "fail_span": [-0.1,75]},
+                        "spike_test": {
+                            "suspect_threshold": 3.0,
+                            "fail_threshold": 6.0},
+                        "rate_of_change_test": {
+                            "threshold": 5/(15*60)},
+                        "flat_line_test": {
+                            "tolerance": 0.01,
+                            "suspect_threshold": 2*60*60,
+                            "fail_threshold": 4*60*60}
+                    }
+                }
+            }
+        if fulldata_flag:
+            config['wind_speed']['qartod']['spike_test']['suspect_threshold'] = 1.5
+            config['wind_speed']['qartod']['spike_test']['fail_threshold'] = 3.0
+            del config['wind_speed']['qartod']['rate_of_change_test']
+            del config['wind_speed']['qartod']['flat_line_test']
+    elif sensor == 'wind_from_direction':
+        config = {
+                "wind_from_direction": {
+                    "qartod": {
+                        "gross_range_test": {
+                            "suspect_span": [0,360],
+                            "fail_span": [-0.1,360.1]},
+                        "spike_test": {
+                            "suspect_threshold": 75,
+                            "fail_threshold": 150},
+                        "rate_of_change_test": {
+                            "threshold": 90/(5*60)},
+                        "flat_line_test": {
+                            "tolerance": 1,
+                            "suspect_threshold": 60*60,
+                            "fail_threshold": 2*60*60}
+                    }
+                }
+            }
+        if fulldata_flag:
+            config['wind_from_direction']['qartod']['spike_test']['suspect_threshold'] = 45
+            config['wind_from_direction']['qartod']['spike_test']['fail_threshold'] = 90
+            del config['wind_from_direction']['qartod']['rate_of_change_test']
+            del config['wind_from_direction']['qartod']['flat_line_test']
+            
+            
+    elif sensor == 'air_pressure_at_mean_sea_level':
+        config = {
+            "air_pressure_at_mean_sea_level": {
+                "qartod": {
+                    "gross_range_test": {
+                        "suspect_span": [950, 1070],
+                        "fail_span": [900, 1120]},
+                    "spike_test": {
+                        "suspect_threshold": 1,
+                        "fail_threshold": 5},
+                    "rate_of_change_test": {
+                        "threshold": 5/(30*60)},
+                    "flat_line_test": {
+                        "tolerance": 0.01,
+                        "suspect_threshold": 30*60,
+                        "fail_threshold": 60*60}
+                }
+            }
+        }
+        if fulldata_flag:
+            config['air_pressure_at_mean_sea_level']['qartod']['spike_test']['suspect_threshold'] = 0.5
+            config['air_pressure_at_mean_sea_level']['qartod']['spike_test']['fail_threshold'] = 1.0
+            del config['air_pressure_at_mean_sea_level']['qartod']['rate_of_change_test']
+            del config['air_pressure_at_mean_sea_level']['qartod']['flat_line_test']
+    elif sensor == 'relative_humidity':
+        config = {
+            "relative_humidity": {
+                "qartod": {
+                    "gross_range_test": {
+                        "suspect_span": [5,100],
+                        "fail_span": [0,105]},
+                    "spike_test": {
+                        "suspect_threshold": 5,
+                        "fail_threshold": 10},
+                    "rate_of_change_test": {
+                        "threshold": 10/(5*60)},
+                    "flat_line_test": {
+                        "tolerance": 0.1,
+                            "suspect_threshold": 2*60*60,
+                            "fail_threshold": 4*60*60}
+                }
+            }
+        }
+        if fulldata_flag:
+            config['relative_humidity']['qartod']['spike_test']['suspect_threshold'] = 0.5
+            config['relative_humidity']['qartod']['spike_test']['fail_threshold'] = 1.0
+            del config['relative_humidity']['qartod']['rate_of_change_test']
+            del config['relative_humidity']['qartod']['flat_line_test']
+    elif sensor == 'rainfall_amount':
+        config = {
+            "rainfall_amount": {
+                "qartod": {
+                    "gross_range_test": {
+                        "suspect_span": [0,100],
+                        "fail_span": [-0.01,150]},
+                    "spike_test": {
+                        "suspect_threshold": 5,
+                        "fail_threshold": 10},
+                    "rate_of_change_test": {
+                        "threshold": 3/(30*60)},
+                    "flat_line_test": {
+                        "tolerance": 0.01,
+                        "suspect_threshold": 30*60,
+                        "fail_threshold": 60*60}
+                }
+            }
+        }
+        if fulldata_flag:
+            config['rainfall_amount']['qartod']['spike_test']['suspect_threshold'] = 0.5
+            config['rainfall_amount']['qartod']['spike_test']['fail_threshold'] = 1.0
+            del config['rainfall_amount']['qartod']['rate_of_change_test']
+            del config['rainfall_amount']['qartod']['flat_line_test']
+    elif sensor == 'surface_downwelling_shortwave_flux_in_air':
+        config = {
+            "surface_downwelling_shortwave_flux_in_air": {
+                "qartod": {
+                    "gross_range_test": {
+                        "suspect_span": [0,1500],
+                        "fail_span": [-0.01,2000]},
+                    "spike_test": {
+                        "suspect_threshold": 250,
+                        "fail_threshold": 500},
+                    "rate_of_change_test": {
+                        "threshold": 2000/(60*60)},
+                    "flat_line_test": {
+                        "tolerance": 0.01,
+                        "suspect_threshold": 24*60*60,
+                        "fail_threshold": 36*60*60}
+                }
+            }
+        }
+        if fulldata_flag:
+            config['surface_downwelling_shortwave_flux_in_air']['qartod']['spike_test']['suspect_threshold'] = 25
+            config['surface_downwelling_shortwave_flux_in_air']['qartod']['spike_test']['fail_threshold'] = 50
+            del config['surface_downwelling_shortwave_flux_in_air']['qartod']['rate_of_change_test']
+            del config['surface_downwelling_shortwave_flux_in_air']['qartod']['flat_line_test']
+    
+    elif sensor == 'surface_downwelling_longwave_flux_in_air':
+        config = {
+            "surface_downwelling_longwave_flux_in_air": {
+                "qartod": {
+                    "gross_range_test": {
+                        "suspect_span": [0,600],
+                        "fail_span": [-0.01,1000]},
+                    "spike_test": {
+                        "suspect_threshold": 5,
+                        "fail_threshold": 10},
+                    "rate_of_change_test": {
+                        "threshold": 1000/(60*60)},
+                    "flat_line_test": {
+                        "tolerance": 0.01,
+                        "suspect_threshold": 12*60*60,
+                        "fail_threshold": 24*60*60}
+                }
+            }
+        }
+        if fulldata_flag:
+            config['surface_downwelling_longwave_flux_in_air']['qartod']['spike_test']['suspect_threshold'] = 2.5
+            config['surface_downwelling_longwave_flux_in_air']['qartod']['spike_test']['fail_threshold'] = 5
+            del config['surface_downwelling_longwave_flux_in_air']['qartod']['rate_of_change_test']
+            del config['surface_downwelling_longwave_flux_in_air']['qartod']['flat_line_test']
+        
+    return config
+
+
+def run_qartod_tests(var_df, instrument_model, sensor, target_depth, sample_rate, platform='sensor'):
     
     
     # Ensure that the variable is a pandas dataframe
     if not(isinstance(var_df,pd.DataFrame)):
         var_df = pd.DataFrame(data=var_df,columns=['time',sensor])
-    
-    config = load_sensor_qartod_config(instrument_model, sensor, target_depth, sample_rate)
+
+    # Load in the qartod configuration settings
+    if platform == 'orca20_met':
+        config = load_metsensor_orca20_qartod_config(sensor, sample_rate)
+    else:
+        config = load_sensor_qartod_config(instrument_model, sensor, target_depth, sample_rate)
         
     c = Config(config)
 

@@ -247,242 +247,280 @@ def apply_magnetic_declination(datadates, buoy_lat, buoy_lon,
     
     return vel_beam1_rot, vel_beam2_rot, avg_mag_dec
 
+def calculate_sound_speed_correction(syscon, buoy_info, adcp_time, 
+                                     xducer_depth, soundvel, xducer_temp):
+
+    #######################################################################
+    # Calculate a correction factor, based upon a calculated sound velocity
+
+    # Get the estimated salinty from the instrument parameters
+    est_salt = syscon['estimated_salinity']
+
+    buoy_lon = buoy_info['longitude']
+    buoy_lat = buoy_info['latitude']
+    NT = len(adcp_time)
+
+    # Calcuate the estimated salinity, as an "Absolute Salinity" (SA)
+    transducer_abs_sal = [gsw.SA_from_SP(est_salt, xducer_depth, buoy_lon, buoy_lat) 
+                          for ii in range(NT)]
+
+    # Calculate the "Conservative Temperature" (CT)
+    transducer_conservative_temperature = gsw.CT_from_t(transducer_abs_sal , 
+                                                        xducer_temp,
+                                                        xducer_depth)
+    # Use the SA and CT calculate the sound velocity
+    svel_calc = gsw.sound_speed(transducer_abs_sal, 
+                                transducer_conservative_temperature, 
+                                xducer_depth)
+    sound_corr = svel_calc/soundvel
+
+    sound_corr = [1 for ii in range(NT)]
+
+    return sound_corr
+
 def adcp_regrid_ensemble(zgrid, zs_adcp, depth_xducer, 
-                         vars_to_regrid, orientation='upfacing'):
-    
-    import numpy as np
-    
-    
-    # Extract out the names of all the variables to regrid
-    
-    # Get the shape of the new data to regrid 
-    # (NT from the variable, and NZ from the new zgrid)
-    var_names = [ii for ii in vars_to_regrid.keys()]
-    [NT,NZ] = vars_to_regrid[var_names[0]].shape
-    NZ = len(zgrid)
-    
-    # Define an interpolation function, where only
-    # non-NaN values are included in the interpolation
-    def interp_prof(x, xp, fp, printflag=False):
-        if not(isinstance(xp, np.ndarray)):
-            xp = np.array(xp)
-        if not(isinstance(fp, np.ndarray)):
-            fp = np.array(fp)
-        goodinds = np.logical_not(np.isnan(fp))
-        f = np.nan*np.zeros(len(x))
-        if sum(goodinds) >= 2:
-            f = np.interp(x, xp[goodinds], fp[goodinds], left=np.nan, right=np.nan)
-        return f
-    
-    
-    # Define a new dictionary to store the regridded variables
-    regridded_vars = {}
-    
-    # Step through each of the variables to be regridded
-    for var in var_names:
+                            vars_to_regrid, orientation='upfacing'):
         
-        # Initialize a new empty array to store the regridded values
-        var_regrid = np.nan*np.zeros((NT,NZ))
+        import numpy as np
         
-        # Step through each time step
-        for tt in range(0,NT):
+        
+        # Extract out the names of all the variables to regrid
+        
+        # Get the shape of the new data to regrid 
+        # (NT from the variable, and NZ from the new zgrid)
+        var_names = [ii for ii in vars_to_regrid.keys()]
+        [NT,NZ] = vars_to_regrid[var_names[0]].shape
+        NZ = len(zgrid)
+        
+        # Define an interpolation function, where only
+        # non-NaN values are included in the interpolation
+        def interp_prof(x, xp, fp, printflag=False):
+            if not(isinstance(xp, np.ndarray)):
+                xp = np.array(xp)
+            if not(isinstance(fp, np.ndarray)):
+                fp = np.array(fp)
+            goodinds = np.logical_not(np.isnan(fp))
+            f = np.nan*np.zeros(len(x))
+            if sum(goodinds) >= 2:
+                f = np.interp(x, xp[goodinds], fp[goodinds], left=np.nan, right=np.nan)
+            return f
+        
+        
+        # Define a new dictionary to store the regridded variables
+        regridded_vars = {}
+        
+        # Step through each of the variables to be regridded
+        for var in var_names:
             
-            # Create an accurate z level, based upon the
-            # distance from the ADCP head and the 
-            # adjusted transducer depth
-            z_adcp = zs_adcp[tt]
+            # Initialize a new empty array to store the regridded values
+            var_regrid = np.nan*np.zeros((NT,NZ))
             
-            if orientation == 'upfacing':
-                zadjust_adcp = depth_xducer[tt] - z_adcp
+            # Step through each time step
+            for tt in range(0,NT):
                 
-                # Regrid the variable
-                var_regrid[tt,:] = interp_prof(zgrid, zadjust_adcp[::-1], 
-                                               vars_to_regrid[var][tt,::-1])
-            else:
-                zadjust_adcp = depth_xducer[tt] + z_adcp
+                # Create an accurate z level, based upon the
+                # distance from the ADCP head and the 
+                # adjusted transducer depth
+                z_adcp = zs_adcp[tt]
                 
-                # Regrid the variable
-                var_regrid[tt,:] = interp_prof(zgrid, zadjust_adcp, 
-                                               vars_to_regrid[var][tt,:])
+                if orientation == 'upfacing':
+                    zadjust_adcp = depth_xducer[tt] - z_adcp
+                    
+                    # Regrid the variable
+                    var_regrid[tt,:] = interp_prof(zgrid, zadjust_adcp[::-1], 
+                                                vars_to_regrid[var][tt,::-1])
+                else:
+                    zadjust_adcp = depth_xducer[tt] + z_adcp
+                    
+                    # Regrid the variable
+                    var_regrid[tt,:] = interp_prof(zgrid, zadjust_adcp, 
+                                                vars_to_regrid[var][tt,:])
 
-            
-            
-        # If the data is correlation or echo data, 
-        # ensure that it remains of the "int" type
-        if ('corr' in var) or ('echo' in var):
-            var_regrid = var_regrid.astype(int)
-            
-        # Store the new regridded data
-        regridded_vars[var] = var_regrid
-    
-    return regridded_vars
-
-
-
-def extract_ensemble_data(adcp_records):
-    
-    n_records = len(adcp_records)
-    adcp_record = adcp_records[0]
-
-    bin_1_dist = adcp_record.fixed_data.bin_1_distance/100
-    bin_ncells = adcp_record.fixed_data.number_of_cells
-    bin_cell_length = adcp_record.fixed_data.depth_cell_length/100
-    z_adcp = bin_cell_length*np.arange(0, bin_ncells) + bin_1_dist
-
-    if adcp_record.sysconfig.beam_facing == 1:
-        beam_dir = 'upfacing'
-    else:
-        beam_dir = 'downfacing'
-    if adcp_record.sysconfig.beam_pattern == 1:
-        beam_pat = 'convex'
-    else:
-        beam_pat = 'concave'
-
-    if adcp_record.coord_transform.coord_transform == 0:
-        coord_xform = 'beam'
-    elif adcp_record.coord_transform.coord_transform == 1:
-        coord_xform = 'instrument'
-    elif adcp_record.coord_transform.coord_transform == 2:
-        coord_xform = 'ship'
-    elif adcp_record.coord_transform.coord_transform == 3:
-        coord_xform = 'earth'
-
-    if adcp_record.fixed_data.system_bandwidth == 0:
-        bandwidth = 'broad'
-    else:
-        bandwidth = 'narrow'
+                
+                
+            # If the data is correlation or echo data, 
+            # ensure that it remains of the "int" type
+            if ('corr' in var) or ('echo' in var):
+                var_regrid = var_regrid.astype(int)
+                
+            # Store the new regridded data
+            regridded_vars[var] = var_regrid
         
-    threebeam_flag = False
-    if adcp_record.coord_transform.three_beam_used == 1:
-        threebeam_flag = True
+        return regridded_vars
+
+
+
+    def extract_ensemble_data(adcp_records):
         
+        n_records = len(adcp_records)
+        adcp_record = adcp_records[0]
 
-    sys_config = {'frequency': str(adcp_record.sysconfig.frequency) + 'kHz',
-                  'beam_direction': beam_dir,
-                  'beam_pattern': beam_pat,
-                  'beam_angle': adcp_record.fixed_data.beam_angle,
-                  'beam_transform': coord_xform,
-                  'three_beams': threebeam_flag,
-                  'serial_number': adcp_record.fixed_data.serial_number}
-    
+        bin_1_dist = adcp_record.fixed_data.bin_1_distance/100
+        bin_ncells = adcp_record.fixed_data.number_of_cells
+        bin_cell_length = adcp_record.fixed_data.depth_cell_length/100
+        z_adcp = bin_cell_length*np.arange(0, bin_ncells) + bin_1_dist
 
-    instr_params = {'transmit_pulse_length': adcp_record.fixed_data.transmit_pulse_length/100,
-                    'low_correlation_threshold': adcp_record.fixed_data.low_corr_threshold,
-                    'velocity_error_threshold': adcp_record.fixed_data.error_velocity_max,
-                    'min_percent_good': adcp_record.fixed_data.minimum_percentage,
-                    'heading_bias': adcp_record.fixed_data.heading_bias,
-                    'estimated_salinity': adcp_record.variable_data.salinity,
-                    'bandwidth': bandwidth}
-
-    ens_no = []
-
-    dtnum = []
-    heading = []
-    pitch = []
-    roll = []
-    hdg_std = []
-    pitch_std = []
-    roll_std = []
-    depth_xducer = []
-    soundvel = []
-    xducer_temp = []
-    
-    zadcps = []
-
-    corr_beam1 = []
-    corr_beam2 = []
-    corr_beam3 = []
-    corr_beam4 = []
-
-    echo_beam1 = []
-    echo_beam2 = []
-    echo_beam3 = []
-    echo_beam4 = []
-
-    vel_beam1 = []
-    vel_beam2 = []
-    vel_beam3 = []
-    vel_beam4 = []
-
-
-    for ii in range(0,n_records):
-
-        ens_no.append(adcp_records[ii].variable_data.ensemble_number)
-
-        bin_1_dist = adcp_records[ii].fixed_data.bin_1_distance/100
-        bin_ncells = adcp_records[ii].fixed_data.number_of_cells
-        bin_cell_length = adcp_records[ii].fixed_data.depth_cell_length/100
-        znew_adcp = bin_cell_length*np.arange(0, bin_ncells) + bin_1_dist
-        zadcps.append(znew_adcp)
-
-        dtnum.append(datetime.datetime(2000+adcp_records[ii].variable_data.rtc_year,
-                                       adcp_records[ii].variable_data.rtc_month,
-                                       adcp_records[ii].variable_data.rtc_day,
-                                       adcp_records[ii].variable_data.rtc_hour,
-                                       adcp_records[ii].variable_data.rtc_minute,
-                                       adcp_records[ii].variable_data.rtc_second,
-                                       adcp_records[ii].variable_data.rtc_hundredths*1000))
-
-        heading.append(adcp_records[ii].variable_data.heading/100)
-        pitch.append(adcp_records[ii].variable_data.pitch/100)
-        roll.append(adcp_records[ii].variable_data.roll/100)
-        hdg_std.append(adcp_records[ii].variable_data.heading_standard_deviation)
-        pitch_std.append(adcp_records[ii].variable_data.pitch_standard_deviation/10)
-        roll_std.append(adcp_records[ii].variable_data.roll_standard_deviation/10)
-        depth_xducer.append(adcp_records[ii].variable_data.depth_of_transducer/10)
-        soundvel.append(adcp_records[ii].variable_data.speed_of_sound)
-        xducer_temp.append(adcp_records[ii].variable_data.temperature/100)
-
-        corr_beam1.append(adcp_records[ii].correlation_magnitudes.beam1)
-        corr_beam2.append(adcp_records[ii].correlation_magnitudes.beam2)
-        corr_beam3.append(adcp_records[ii].correlation_magnitudes.beam3)
-        
-
-        echo_beam1.append(adcp_records[ii].echo_intensity.beam1)
-        echo_beam2.append(adcp_records[ii].echo_intensity.beam2)
-        echo_beam3.append(adcp_records[ii].echo_intensity.beam3)
-
-        vel_beam1.append([np.nan if abs(ii) == 32768 else ii/1000 
-                          for ii in adcp_records[ii].velocities.beam1])
-        vel_beam2.append([np.nan if abs(ii) == 32768 else ii/1000 
-                          for ii in adcp_records[ii].velocities.beam2])
-        vel_beam3.append([np.nan if abs(ii) == 32768 else ii/1000 
-                          for ii in adcp_records[ii].velocities.beam3])
-        
-        
-        if not(threebeam_flag):
-            corr_beam4.append(adcp_records[ii].correlation_magnitudes.beam4)
-            echo_beam4.append(adcp_records[ii].echo_intensity.beam4)
-            vel_beam4.append([np.nan if abs(ii) == 32768 else ii/1000 
-                              for ii in adcp_records[ii].velocities.beam4])
+        if adcp_record.sysconfig.beam_facing == 1:
+            beam_dir = 'upfacing'
         else:
-            corr_beam4.append([np.nan for ii in adcp_records[ii].correlation_magnitudes.beam1])
-            echo_beam4.append([np.nan for ii in adcp_records[ii].echo_intensity.beam1])
-            vel_beam4.append([np.nan for ii in adcp_records[ii].velocities.beam1])
+            beam_dir = 'downfacing'
+        if adcp_record.sysconfig.beam_pattern == 1:
+            beam_pat = 'convex'
+        else:
+            beam_pat = 'concave'
+
+        if adcp_record.coord_transform.coord_transform == 0:
+            coord_xform = 'beam'
+        elif adcp_record.coord_transform.coord_transform == 1:
+            coord_xform = 'instrument'
+        elif adcp_record.coord_transform.coord_transform == 2:
+            coord_xform = 'ship'
+        elif adcp_record.coord_transform.coord_transform == 3:
+            coord_xform = 'earth'
+
+        if adcp_record.fixed_data.system_bandwidth == 0:
+            bandwidth = 'broad'
+        else:
+            bandwidth = 'narrow'
+            
+        threebeam_flag = False
+        if adcp_record.coord_transform.three_beam_used == 1:
+            threebeam_flag = True
             
 
+        sys_config = {'frequency': str(adcp_record.sysconfig.frequency) + 'kHz',
+                    'beam_direction': beam_dir,
+                    'beam_pattern': beam_pat,
+                    'beam_angle': adcp_record.fixed_data.beam_angle,
+                    'beam_transform': coord_xform,
+                    'three_beams': threebeam_flag,
+                    'serial_number': adcp_record.fixed_data.serial_number}
+        
+
+        instr_params = {'transmit_pulse_length': adcp_record.fixed_data.transmit_pulse_length/100,
+                        'low_correlation_threshold': adcp_record.fixed_data.low_corr_threshold,
+                        'velocity_error_threshold': adcp_record.fixed_data.error_velocity_max,
+                        'min_percent_good': adcp_record.fixed_data.minimum_percentage,
+                        'heading_bias': adcp_record.fixed_data.heading_bias,
+                        'estimated_salinity': adcp_record.variable_data.salinity,
+                        'bandwidth': bandwidth}
+
+        ens_no = []
+
+        dtnum = []
+        heading = []
+        pitch = []
+        roll = []
+        hdg_std = []
+        pitch_std = []
+        roll_std = []
+        depth_xducer = []
+        soundvel = []
+        xducer_temp = []
+        
+        zadcps = []
+
+        corr_beam1 = []
+        corr_beam2 = []
+        corr_beam3 = []
+        corr_beam4 = []
+
+        echo_beam1 = []
+        echo_beam2 = []
+        echo_beam3 = []
+        echo_beam4 = []
+
+        vel_beam1 = []
+        vel_beam2 = []
+        vel_beam3 = []
+        vel_beam4 = []
 
 
-    corr_beam1_array = np.array([np.array(ii) for ii in corr_beam1])
-    corr_beam2_array = np.array([np.array(ii) for ii in corr_beam2])
-    corr_beam3_array = np.array([np.array(ii) for ii in corr_beam3])
-    corr_beam4_array = np.array([np.array(ii) for ii in corr_beam4])
+        for ii in range(0,n_records):
 
-    echo_beam1_array = np.array([np.array(ii) for ii in echo_beam1])
-    echo_beam2_array = np.array([np.array(ii) for ii in echo_beam2])
-    echo_beam3_array = np.array([np.array(ii) for ii in echo_beam3])
-    echo_beam4_array = np.array([np.array(ii) for ii in echo_beam4])
+            
+            new_dt = datetime.datetime(2000+adcp_records[ii].variable_data.rtc_year,
+                                    adcp_records[ii].variable_data.rtc_month,
+                                    adcp_records[ii].variable_data.rtc_day,
+                                    adcp_records[ii].variable_data.rtc_hour,
+                                    adcp_records[ii].variable_data.rtc_minute,
+                                    adcp_records[ii].variable_data.rtc_second,
+                                    adcp_records[ii].variable_data.rtc_hundredths*1000)
+            if (len(dtnum) > 0) and (new_dt < dtnum[-1]):
+                print('Bad timestamp found in ensemble ' + str(adcp_records[ii].variable_data.ensemble_number) +
+                    ' with timestamp ' + str(new_dt) + '. Last timestamp was ' + str(dtnum[-1]) + '. Skipping this ensemble.')
+                continue
+            dtnum.append(new_dt)
+            
 
-    vel_beam1_array = np.array([np.array(ii) for ii in vel_beam1])
-    vel_beam2_array = np.array([np.array(ii) for ii in vel_beam2])
-    vel_beam3_array = np.array([np.array(ii) for ii in vel_beam3])
-    vel_beam4_array = np.array([np.array(ii) for ii in vel_beam4])
-    
-    
-    return (sys_config, instr_params, zadcps, 
-            ens_no, dtnum, heading, 
-            pitch, roll, hdg_std, pitch_std, roll_std,
-            depth_xducer, soundvel, xducer_temp, 
+            ens_no.append(adcp_records[ii].variable_data.ensemble_number)
+
+            bin_1_dist = adcp_records[ii].fixed_data.bin_1_distance/100
+            bin_ncells = adcp_records[ii].fixed_data.number_of_cells
+            bin_cell_length = adcp_records[ii].fixed_data.depth_cell_length/100
+            znew_adcp = bin_cell_length*np.arange(0, bin_ncells) + bin_1_dist
+            zadcps.append(znew_adcp)
+
+            heading.append(adcp_records[ii].variable_data.heading/100)
+            pitch.append(adcp_records[ii].variable_data.pitch/100)
+            roll.append(adcp_records[ii].variable_data.roll/100)
+            hdg_std.append(adcp_records[ii].variable_data.heading_standard_deviation)
+            pitch_std.append(adcp_records[ii].variable_data.pitch_standard_deviation/10)
+            roll_std.append(adcp_records[ii].variable_data.roll_standard_deviation/10)
+            depth_xducer.append(adcp_records[ii].variable_data.depth_of_transducer/10)
+            soundvel.append(adcp_records[ii].variable_data.speed_of_sound)
+            xducer_temp.append(adcp_records[ii].variable_data.temperature/100)
+
+            corr_beam1.append(adcp_records[ii].correlation_magnitudes.beam1)
+            corr_beam2.append(adcp_records[ii].correlation_magnitudes.beam2)
+            corr_beam3.append(adcp_records[ii].correlation_magnitudes.beam3)
+            
+
+            echo_beam1.append(adcp_records[ii].echo_intensity.beam1)
+            echo_beam2.append(adcp_records[ii].echo_intensity.beam2)
+            echo_beam3.append(adcp_records[ii].echo_intensity.beam3)
+
+            vel_beam1.append([np.nan if abs(ii) == 32768 else ii/1000 
+                            for ii in adcp_records[ii].velocities.beam1])
+            vel_beam2.append([np.nan if abs(ii) == 32768 else ii/1000 
+                            for ii in adcp_records[ii].velocities.beam2])
+            vel_beam3.append([np.nan if abs(ii) == 32768 else ii/1000 
+                            for ii in adcp_records[ii].velocities.beam3])
+            
+            
+            if not(threebeam_flag):
+                corr_beam4.append(adcp_records[ii].correlation_magnitudes.beam4)
+                echo_beam4.append(adcp_records[ii].echo_intensity.beam4)
+                vel_beam4.append([np.nan if abs(ii) == 32768 else ii/1000 
+                                for ii in adcp_records[ii].velocities.beam4])
+            else:
+                corr_beam4.append([np.nan for ii in adcp_records[ii].correlation_magnitudes.beam1])
+                echo_beam4.append([np.nan for ii in adcp_records[ii].echo_intensity.beam1])
+                vel_beam4.append([np.nan for ii in adcp_records[ii].velocities.beam1])
+                
+
+
+
+        corr_beam1_array = np.array([np.array(ii) for ii in corr_beam1])
+        corr_beam2_array = np.array([np.array(ii) for ii in corr_beam2])
+        corr_beam3_array = np.array([np.array(ii) for ii in corr_beam3])
+        corr_beam4_array = np.array([np.array(ii) for ii in corr_beam4])
+
+        echo_beam1_array = np.array([np.array(ii) for ii in echo_beam1])
+        echo_beam2_array = np.array([np.array(ii) for ii in echo_beam2])
+        echo_beam3_array = np.array([np.array(ii) for ii in echo_beam3])
+        echo_beam4_array = np.array([np.array(ii) for ii in echo_beam4])
+
+        vel_beam1_array = np.array([np.array(ii) for ii in vel_beam1])
+        vel_beam2_array = np.array([np.array(ii) for ii in vel_beam2])
+        vel_beam3_array = np.array([np.array(ii) for ii in vel_beam3])
+        vel_beam4_array = np.array([np.array(ii) for ii in vel_beam4])
+        
+        
+        return (sys_config, instr_params, zadcps, 
+                ens_no, dtnum, heading, 
+                pitch, roll, hdg_std, pitch_std, roll_std,
+                depth_xducer, soundvel, xducer_temp, 
             corr_beam1_array, corr_beam2_array, corr_beam3_array, corr_beam4_array,
             echo_beam1_array, echo_beam2_array, echo_beam3_array, echo_beam4_array,
             vel_beam1_array, vel_beam2_array, vel_beam3_array, vel_beam4_array
@@ -497,9 +535,9 @@ def make_adcp_xr(adcp_filename, buoy_name, deployment_name, lat, lon, depth,
                  depth_xducer, soundvel, xducer_temp, 
                  corr_beam1_array, corr_beam2_array, corr_beam3_array, corr_beam4_array,
                  echo_beam1_array, echo_beam2_array, echo_beam3_array, echo_beam4_array,
-                 vel_beam1_array, vel_beam2_array, vel_beam3_array, vel_beam4_array):
+                 vel_beam1_array, vel_beam2_array, vel_beam3_array, vel_beam4_array, coord_transform=False):
     
-    if sys_config['beam_transform'] == 'earth':
+    if (sys_config['beam_transform'] == 'earth') or coord_transform:
         beam_names = ['eastward_sea_water_velocity', 'northward_sea_water_velocity',
                       'upward_sea_water_velocity', 'upward_sea_water_velocity_error']
         beam_desc = ['velocity of sea water in the eastward direction (westward is negative)', 
@@ -554,7 +592,7 @@ def make_adcp_xr(adcp_filename, buoy_name, deployment_name, lat, lon, depth,
     xr_new.attrs['publisher_institution'] = 'University of Washington - Applied Physics Laboratory'
     xr_new.attrs['publisher_type'] = 'group'
     xr_new.attrs['publisher_url'] = 'https://nwem.apl.washington.edu/'
-    xr_new.attrs['publisher_country'] = 'United Stated'
+    xr_new.attrs['publisher_country'] = 'United States'
     
     
     xr_new.attrs['author'] = 'Seth Travis'
@@ -569,6 +607,10 @@ def make_adcp_xr(adcp_filename, buoy_name, deployment_name, lat, lon, depth,
     xr_new.attrs['beam_pattern'] = sys_config['beam_pattern']
     xr_new.attrs['beam_angle'] = sys_config['beam_angle']
     xr_new.attrs['coordinate_transformation'] = sys_config['beam_transform']
+    if coord_transform:
+        xr_new.attrs['coordinate_transformation_description'] = 'Coordinates have been transformed into earth coordinates. The original coordinate reference is given in the "coordinate_transformation" attribute.'
+    else:
+        xr_new.attrs['coordinate_transformation_description'] = 'Coordinates have not been transformed in post-processing, and are the same as the when accessed from the instrument.'
     
     xr_new.attrs['transmit_pulse_length'] = instr_params['transmit_pulse_length']
     xr_new.attrs['low_correlation_threshold'] = instr_params['low_correlation_threshold']
@@ -769,6 +811,14 @@ def make_adcp_xr(adcp_filename, buoy_name, deployment_name, lat, lon, depth,
     xr_new['echo_intensity_beam4'].attrs["description"] = 'echo intensity for beam 4, at about 0.45 db per count'
     xr_new['echo_intensity_beam4'].attrs["units"] = 'db-'
     xr_new['echo_intensity_beam4'].attrs["missing_value"] = fillVal
+    
+    
+    xr_new['echo_intensity_average'] = xr.DataArray(echo_avg, dims=['time','depth'])
+    xr_new['echo_intensity_average'].fillna(fillVal)
+    xr_new['echo_intensity_average'].attrs["long_name"] = 'echo_intensity_average'
+    xr_new['echo_intensity_average'].attrs["description"] = 'average echo intensity across all four beams, at about 0.45 db per count'
+    xr_new['echo_intensity_average'].attrs["units"] = 'db-'
+    xr_new['echo_intensity_average'].attrs["missing_value"] = fillVal
     
     
     # Beam velocities
@@ -1138,54 +1188,62 @@ def buoy_adcp_wrapper(buoy_name, deployment_name, instrument_name='adcp', serial
      corr_beam1, corr_beam2, corr_beam3, corr_beam4,
      echo_beam1, echo_beam2, echo_beam3, echo_beam4,
      vel_beam1, vel_beam2, vel_beam3, vel_beam4] = extract_ensemble_data(adcp_records)
-    print(sys_config)
+    
     if status == 'recovered':
         adcp_timestamps = dtnum 
 
-    if sys_config['beam_transform'] != 'earth':
+    # Calculate a sound speed correction factor, using the estimated salinity
+    # and the measured temperature and depth of the transducer. This is used to correct the velocity measurements.
+    svel_corr = calculate_sound_speed_correction(sys_config, deployment_data, adcp_timestamps, 
+                                                 depth_xducer, soundvel, xducer_temp)
 
-        if sys_config['beam_transform'] == 'beam':
-            beam_angle = sys_config['beam_angle']
-            if sys_config['beam_pattern'] == 'convex':
-                beam_pattern = 1
-            elif sys_config['beam_pattern'] == 'concave':
-                beam_pattern = -1
-            else:
-                beam_pattern = 0
-            beam_direction = sys_config['beam_direction']
-
-            beam2inst = adcp_funcs.beam_to_inst_transform(beam_angle, c=beam_pattern)
-            inst2earth = adcp_funcs.inst_to_earth_transform(heading, pitch, roll, 
-                                                            orientation=beam_direction)
-
-            vel_earth = np.einsum('tij,tzj->tzi', inst2earth, 
-                                  np.stack([vel_beam1, vel_beam2, vel_beam3, vel_beam4], 
-                                           axis=-1) @ beam2inst.T)
-            vel_beam1 = vel_earth[:, :, 0]
-            vel_beam2 = vel_earth[:, :, 1]
-            vel_beam3 = vel_earth[:, :, 2]
-            vel_beam4 = vel_earth[:, :, 3]
-
-            del vel_earth, inst2earth, beam2inst
-
-        if sys_config['beam_transform'] == 'instrument':
-
-            inst2earth = adcp_funcs.inst_to_earth_transform(heading, pitch, roll, 
-                                                            orientation=beam_direction)
-
-            vel_earth = np.einsum('tij,tzj->tzi', inst2earth, 
-                                  np.stack([vel_beam1, vel_beam2, vel_beam3, vel_beam4], 
-                                           axis=-1))
-            vel_beam1 = vel_earth[:, :, 0]
-            vel_beam2 = vel_earth[:, :, 1]
-            vel_beam3 = vel_earth[:, :, 2]
-            vel_beam4 = vel_earth[:, :, 3]
-
-            del vel_earth, inst2earth
-
+    coord_transform = False
+    if sys_config['beam_transform'] == 'beam':
+        beam_angle = sys_config['beam_angle']
+        if sys_config['beam_pattern'] == 'convex':
+            beam_pattern = 1
+        elif sys_config['beam_pattern'] == 'concave':
+            beam_pattern = -1
         else:
-            print('   ...Beam transform is not in "beam", "instrument", or "earth". Cannot process the data. STOP...')
-            return
+            beam_pattern = 0
+        beam_direction = sys_config['beam_direction']
+
+        beam2inst = adcp_funcs.beam_to_inst_transform(beam_angle, c=beam_pattern)
+        inst2earth = adcp_funcs.inst_to_earth_transform(heading, pitch, roll, 
+                                                        orientation=beam_direction)
+
+        vel_earth = np.einsum('tij,tzj->tzi', inst2earth, 
+                                np.stack([vel_beam1, vel_beam2, vel_beam3, vel_beam4], 
+                                        axis=-1) @ beam2inst.T)
+        vel_beam1 = vel_earth[:, :, 0]
+        vel_beam2 = vel_earth[:, :, 1]
+        vel_beam3 = vel_earth[:, :, 2]
+        vel_beam4 = vel_earth[:, :, 3]
+
+        del vel_earth, inst2earth, beam2inst
+        coord_transform = True
+        print('   ...Beam transform is in "beam" coordinates. Converted to earth coordinates.')
+
+    if sys_config['beam_transform'] == 'instrument':
+
+        inst2earth = adcp_funcs.inst_to_earth_transform(heading, pitch, roll, 
+                                                        orientation=beam_direction)
+
+        vel_earth = np.einsum('tij,tzj->tzi', inst2earth, 
+                                np.stack([vel_beam1, vel_beam2, vel_beam3, vel_beam4], 
+                                        axis=-1))
+        vel_beam1 = vel_earth[:, :, 0]
+        vel_beam2 = vel_earth[:, :, 1]
+        vel_beam3 = vel_earth[:, :, 2]
+        vel_beam4 = vel_earth[:, :, 3]
+
+        del vel_earth, inst2earth
+        coord_transform = True
+        print('   ...Beam transform is in "instrument" coordinates. Converted to earth coordinates.')
+
+    else:
+        print('   ...Beam transform is not in "beam", "instrument", or "earth". Cannot process the data. STOP...')
+        return
 
 
     #######################################
@@ -1359,6 +1417,11 @@ def buoy_adcp_wrapper(buoy_name, deployment_name, instrument_name='adcp', serial
         corr_beam2_regrid[:, reflect_depthinds[0][-1]:] = 0
         corr_beam3_regrid[:, reflect_depthinds[0][-1]:] = 0
         corr_beam4_regrid[:, reflect_depthinds[0][-1]:] = 0
+
+    ######################
+    # Calculate an average echo intensity across the four beams
+    print('   ...Calculate an average echo intensity across the four beams')
+    echo_avg = np.nanmean(np.stack([echo_beam1_regrid, echo_beam2_regrid, echo_beam3_regrid, echo_beam4_regrid], axis=-1), axis=-1)
     
     
     ###############################################################
@@ -1400,8 +1463,8 @@ def buoy_adcp_wrapper(buoy_name, deployment_name, instrument_name='adcp', serial
                               pitch, roll, hdg_std, pitch_std, roll_std,
                               depth_xducer, soundvel, xducer_temp, 
                               corr_beam1_regrid, corr_beam2_regrid, corr_beam3_regrid, corr_beam4_regrid,
-                              echo_beam1_regrid, echo_beam2_regrid, echo_beam3_regrid, echo_beam4_regrid,
-                              vel_beam1_regrid, vel_beam2_regrid, vel_beam3_regrid, vel_beam4_regrid)
+                              echo_beam1_regrid, echo_beam2_regrid, echo_beam3_regrid, echo_beam4_regrid, echo_avg,
+                              vel_beam1_regrid, vel_beam2_regrid, vel_beam3_regrid, vel_beam4_regrid, coord_transform)
     adcp_xrnew = adcp_xrnew.drop_duplicates(dim='time', keep='last')
     
     

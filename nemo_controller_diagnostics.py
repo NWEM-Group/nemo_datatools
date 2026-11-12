@@ -256,11 +256,11 @@ def create_smooted_var(data_df, varnames: list, smoothing_minutes: int):
 
 def convert_batt_volt_to_percent(voltdata, doubbatt_flag=False):
     
-    batt_volt = [10.0, 12.0, 12.5, 12.8, 12.9, 13.0, 13.1,
-                 13.2, 13.3, 13.4, 13.6, 14.4]
+    batt_volt = [11.0, 11.41, 11.71, 11.86, 12.01, 12.15,
+                 12.28, 12.4, 12.55, 12.7, 12.85]
     doubbatt_volt = [ii*2 for ii in batt_volt]
-    batt_pers = [0, 9.0, 14.0, 17.0, 20.0, 30.0, 40.0,
-                 70.0, 90.0, 99.0, 99.9, 100.0]
+    batt_pers = [0, 10.0, 20.0, 30.0, 40.0, 50.0, 
+                 60.0, 70.0, 80.0, 90.0, 100.0]
 
     if doubbatt_flag:
         batt_interp = np.interp(voltdata, doubbatt_volt, batt_pers)

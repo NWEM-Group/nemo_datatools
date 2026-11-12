@@ -1,4 +1,147 @@
 
+################################
+# ERDDAP Data Access Functions #
+################################
+def get_erddap_data(erddap_url, dataset, data_protocol="griddap", 
+                    variables=None, constraints=None, timeout_maxretries=5):
+
+    from erddapy import ERDDAP
+    import time
+
+    """
+    Function: get_erddap_data
+    This function uses the erddapy python library to access data from ERDDAP servers,
+    and to return it to users in convenient formats for python users.
+    Data can be pulled from "tabledap" or "griddap" formats, with different
+    output types, depending on the dap type.
+    
+    Inputs:
+    erddap_url    - The url address of the erddap server to pull data from
+    variables     - The selected variables within the dataset.
+    data_protocol - The erddap data protocol for the chosen dataset.
+                    Options include "tabledap" or "griddap"
+                    The default option is given as "griddap"
+    dataset       - The ID for the relevant dataset on the erddap server
+                    If no variables are given, it is assumed that all variables
+                    will be pulled.
+    constraints   - These are set by the user to help restrict the data pull
+                    to only the area and timeframe of interest.
+                    If no constraints are given, all data in a dataset is pulled.
+                    Constraints should be given as a dictionary, where
+                    each entry is a bound and/or selection of a specific axis variable
+                    Exs. {"longitude<=": "min(longitude)+10", "longitude>=": "0"}
+                         {"longitude=": "140", "time>=": "max(time)-30"}
+    
+    Outputs:
+    erddap_data   - This variable contains the pulled data from the erddap server.
+                    If the data_protocol is "griddap",  then erddap_data is an xarray dataset
+                    If the data_protocol is "tabledap", then erddap_data is a pandas dataframe
+    """
+    
+    
+    ############################################
+    # Set-up the connection to the ERDDAP server
+    ############################################
+    
+    # Initialize a variable to store the data from ERDDAP
+    erddap_data = None
+    
+    # Connect to the erddap server
+    e = ERDDAP(server=erddap_url, protocol=data_protocol, response='csv')
+    
+    # Identify the dataset of interest
+    e.dataset_id = dataset
+    
+    
+    #########################################
+    # Pull the data, based upon protocol type
+    #########################################
+    
+    download_attempt = 0
+    
+    # GRIDDAP Protocol
+    if data_protocol == "griddap":
+        
+        # Initialize the connection
+        e.griddap_initialize()
+
+        # Update the constraints
+        if constraints is not None:
+            e_constraints = e.constraints if e.constraints is not None else {}
+            for key, value in constraints.items():
+                e_constraints[key] = value
+            e.constraints = e_constraints
+            
+        # Update the selection of the variables
+        if variables is not None:
+            e.variables = variables
+
+        while download_attempt < timeout_maxretries:
+            try:
+                erddap_data = e.to_xarray()
+                download_attempt = timeout_maxretries
+            except Exception as error_msg:
+                print('Connection error: ')
+                print(error_msg)
+                errors = error_msg
+                if 'message="Not Found: Your query produced no matching results.' in errors.args[0]:
+                    download_attempt = timeout_maxretries
+                    erddap_data = None
+                elif 'message="Not Found: Currently unknown datasetID=' in errors.args[0]:
+                    download_attempt = timeout_maxretries
+                    erddap_data = None
+                else:
+                    download_attempt = download_attempt + 1
+                    print('   ...Download attempt #' + str(download_attempt) + ' timed out. Wait 10 seconds and try again.')
+                    erddap_data = None
+                    time.sleep(10)
+    
+    # TABLEDAP Protocol
+    elif data_protocol == "tabledap":
+
+        # Update the constraints
+        if constraints is not None:
+            e_constraints = e.constraints if e.constraints is not None else {}
+            for key, value in constraints.items():
+                e_constraints[key] = value
+            e.constraints = e_constraints
+            
+        # Update the selection of the variables
+        if variables is not None:
+            e.variables = variables
+
+        while download_attempt < timeout_maxretries:
+            try:
+                erddap_data = e.to_pandas()
+                download_attempt = timeout_maxretries
+            except Exception as error_msg:
+                print('Connection error: ')
+                print(error_msg)
+                errors = error_msg
+                if 'message="Not Found: Your query produced no matching results.' in errors.args[0]:
+                    download_attempt = timeout_maxretries
+                    erddap_data = None
+                elif 'message="Not Found: Currently unknown datasetID=' in errors.args[0]:
+                    download_attempt = timeout_maxretries
+                    erddap_data = None
+                else:
+                    download_attempt = download_attempt + 1
+                    erddap_data = None
+                    print('   ...Download attempt #' + str(download_attempt) + ' timed out. Wait 10 seconds and try again.')
+                    time.sleep(10)
+    
+            
+    # Invalid protocol given
+    else:
+        print('Invalid ERDDAP protocol. Given protocol is: ' + data_protocol)
+        print('Valid protocols include "griddap" or "tabledap". Please restart and try again with a valid protocol')
+        erddap_data = None
+    
+    
+    #############################
+    return erddap_data
+
+
 #############################################
 # Buoy and instrument information functions #
 #############################################
@@ -64,11 +207,131 @@ def get_deployment_info(buoy_designation, basedir):
     import os
     import json
     
-    depinfo_path = os.path.join(basedir, 'deployment_info', buoy_designation.lower() + '_depinfo.json')
+    depinfo_path = os.path.join(basedir, 'info_jsons', 'deployments', 
+                                buoy_designation.lower() + '_deployments.json')
     with open(depinfo_path, 'r') as file:
         depinfo = json.load(file)
     
     return depinfo
+
+def get_info_json():
+
+    import os
+    import json
+    
+    curdir = os.path.dirname(__file__)
+    infojson_dir = os.path.join(curdir, 'info_jsons')
+    if not(os.path.exists(infojson_dir)):
+        print('Unable to find the info_jsons directory,\nwhich contains the json of processing path directories.')
+        print('Path of interest: ' + infojson_dir)
+        print('Ensure that the info_jsons directory exists and\ncontains the "pathdirs.json",and try again.')
+        return None
+    
+    infojson_file = 'pathdirs.json'
+    if not(os.path.exists(os.path.join(infojson_dir, infojson_file))):
+        print('Unable to find the "pathdirs.json" file,\nwhich contains the json of processing path directories.')
+        print('Path of interest: ' + infojson_dir)
+        print('Ensure that the info_jsons directory exists and\ncontains the "pathdirs.json", and try again.')
+        return None
+    
+    with open(os.path.join(infojson_dir, infojson_file), 'r') as file:
+        infodict = json.load(file)
+        
+    return infodict
+
+def load_deployment_starts(buoy_designation, depdir, startDate=None, endDate=None):
+    
+    dep_file = buoy_designation.lower() + '_deployments.json'
+    with open(os.path.join(depdir, dep_file),'r') as f:
+        dep_info = json.load(f)
+
+    if startDate is None and endDate is None:
+        nemo_deps = [dep_info['deployments'][dep] for dep in dep_info['deployments'] 
+                     if dep_info['deployments'][dep]['status'] == 'realtime']
+    else:
+        nemo_deps = [dep_info['deployments'][dep] for dep in dep_info['deployments']]
+        if startDate is not None:
+            nemo_deps = [nemo_dep for nemo_dep in nemo_deps 
+                        if (datetime.datetime.strptime(nemo_dep['start'],'%Y-%m-%dT%H:%M:%SZ') >= startDate)]
+        if endDate is not None:
+            nemo_deps = [nemo_dep for nemo_dep in nemo_deps 
+                        if (nemo_dep['end'] is None or 
+                            datetime.datetime.strptime(nemo_dep['end'],'%Y-%m-%dT%H:%M:%SZ') <= endDate)]
+                         
+
+    dep_starts = [datetime.datetime.strptime(dep['start'],'%Y-%m-%dT%H:%M:%SZ')
+                  for dep in nemo_deps]
+    dep_ends = [datetime.datetime.strptime(dep['end'],'%Y-%m-%dT%H:%M:%SZ') 
+                if dep['end'] is not None else datetime.datetime.now()+datetime.timedelta(days=1)
+                 for dep in nemo_deps]
+    
+    return nemo_deps, dep_starts, dep_ends
+
+
+#################################
+# Time conversion functions     #
+#################################
+def round_seconds(dt):
+    if dt.microsecond > 5e6:
+        dt += dt.timedelta(seconds=1)
+    return dt.replace(microsecond=0)
+
+
+def datetime_toordinal_withseconds(origdate):
+    
+    import numpy as np
+    import datetime
+    
+    year = origdate.year
+    month = origdate.month
+    day = origdate.day
+    hour = origdate.hour
+    minute = origdate.minute
+    second = origdate.second
+    microsec = origdate.microsecond
+    
+    return (datetime.datetime.toordinal(datetime.datetime(year,month,day)) +
+            (hour + (minute + (second + (microsec/1e6))/60)/60)/24)
+
+
+# %%
+
+
+def datetime_fromordinal_withseconds(origdate):
+    
+    import datetime
+    import numpy as np
+    
+    # Take the base integer value, and use this to create a base datetime object
+    floordate = int(origdate)
+    basedate = datetime.datetime.fromordinal(floordate)
+    
+    # Convert the remaining datevalue above the floor date to hours
+    remhours = 24*(origdate - floordate)
+    # Take the base integer value, and use this as the number of hours
+    hours = int(remhours)
+    
+    # Convert the remaining datevalue above the floor hours to minutes
+    remminutes = 60*(remhours - hours)
+    # Take the base integer value, and use this as the number of minutes
+    minutes = int(remminutes)
+    
+    # Convert the remaining datevalue above the floor minutes to seconds
+    remseconds = 60*(remminutes - minutes)
+    # Take the base integer value, and use this as the number of seconds
+    seconds = int(remseconds)
+    
+    # Count the number of remaining microseconds
+    # Note, original data precision limits this
+    # to increments of 10 microseconds accuracy
+    rem_parseconds = int(np.round(100000*(remseconds - seconds))*10)
+    
+    # Create a datetime object using the derived values
+    finaltime = datetime.datetime(basedate.year, basedate.month, basedate.day,
+                                  hours, minutes, seconds)
+    finaltime = finaltime + datetime.timedelta(microseconds=rem_parseconds)
+    
+    return finaltime    
 
 ##################################
 # netCDF Functions               #

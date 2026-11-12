@@ -148,8 +148,6 @@ def build_datadicts(sensor_names, mpk_data):
 
 # # Sensor dataframe processing functions
 
-# In[ ]:
-
 
 def build_sensor_df(sensor_data, sensor_name):
     
@@ -516,6 +514,7 @@ def decode_buoy_msgpack_files_wrapper(buoy_designation, rebuildDict=None, loglev
                 print('   ...Processing successful! - ' + 
                       datetime.datetime.now().strftime('%Y-%b-%d %H:%M:%S'), file=log)
             update_row = {'filename': mpk_file,
+                          'controller_id': controller_id,
                           'processed_flag': True,
                           'processed_date': datetime.datetime.strftime(datetime.datetime.now(),
                                                                        '%Y-%m-%d %H:%M:%S')}
