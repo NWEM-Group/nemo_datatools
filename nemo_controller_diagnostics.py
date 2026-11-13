@@ -246,7 +246,7 @@ def load_buoy_datafiles(basepath, filetype: str = 'sunsaver', lookback_days: int
 def create_smooted_var(data_df, varnames: list, smoothing_minutes: int):
     
     for varname in varnames:
-        data_df[varname+'_smooth'] = pd.Series(data_df[varname].tolist(), index=data_df['date']).rolling(window=str(smoothing_minutes)+'T', center=True).mean().tolist()
+        data_df[varname+'_smooth'] = pd.Series(data_df[varname].tolist(), index=data_df['date']).rolling(window=str(smoothing_minutes)+'min', center=True).mean().tolist()
     
     return data_df
 
@@ -316,10 +316,10 @@ def make_chaba20_eng_plot(buoy_designation: str, sundata, engdata, lookback_days
         
         # Calculate a rolling power window consumption/charge
         load_watthr = np.array(pd.Series(data=(load_watt*timedata_sundiffhrs).tolist(), 
-                                index=timedata_sun).rolling(window='24H',
+                                index=timedata_sun).rolling(window='24h',
                                                             min_periods=int(60*18),center=True).sum().to_list())
         charge_watthr = np.array(pd.Series(data=(charge_watt*timedata_sundiffhrs).tolist(), 
-                                  index=timedata_sun).rolling(window='24H',
+                                  index=timedata_sun).rolling(window='24h',
                                                               min_periods=int(60*18),center=True).sum().to_list())
         
         # Find the time range of interest
@@ -642,7 +642,7 @@ def save_recent_batteryvoltages(webdir:str, buoyprefix:str, sundata, lookback_da
     start_ind = np.where([pd.Timestamp(ii)>=(latest_suntime-datetime.timedelta(days=lookback_days)) 
                           for ii in sundata['date_local']])[0][0]
 
-    sun_tempdata = sundata.copy().set_index(sundata['date_local']).iloc[start_ind:,:].resample('30T').mean()
+    sun_tempdata = sundata.copy().set_index(sundata['date_local']).iloc[start_ind:,:].resample('30min').mean()
     sun_tempdata = sun_tempdata.loc[:,['Vb_f_smooth','battery_percent']].reset_index()
     sun_tempdata['Vb_f_smooth'] = [np.round(ii,2) for ii in sun_tempdata['Vb_f_smooth']]
     sun_tempdata['battery_percent'] = [np.round(ii,2) for ii in sun_tempdata['battery_percent']]
