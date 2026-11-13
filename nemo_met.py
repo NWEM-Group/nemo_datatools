@@ -229,7 +229,7 @@ def process_met_files(buoy_designation, metpaths):
     for col in met_df_sensors:
         if col not in met_df.columns:
             met_df[col] = emptycol
-    met_df.rename(columns=newname_dict, inplace=True)
+    met_df = met_df.rename(columns=newname_dict)
     
     met_df = check_missing_vars(met_df, datatype='met')
     
@@ -324,7 +324,7 @@ def process_rad_files(buoy_designation, shortradpaths, longradpaths):
         for col in sensor_names:
             if col not in sensor_df.columns:
                 sensor_df[col] = emptycol
-        sensor_df.rename(columns=newname_dict, inplace=True)
+        sensor_df = sensor_df.rename(columns=newname_dict)
 
         return sensor_df
     
@@ -667,7 +667,7 @@ def process_wind_files(buoy_designation, windpaths, compasspaths):
     for col in wind_df_sensors:
         if col not in wind_df.columns:
             wind_df[col] = emptycol
-    wind_df.rename(columns=newname_dict, inplace=True)
+    wind_df = wind_df.rename(columns=newname_dict)
     
     wind_df = check_missing_vars(wind_df, datatype='wind')
     
@@ -823,7 +823,7 @@ def process_qartod_tests(buoy_designation, data_df,
                     new_col_dict = {}
                     for col in qc_cols:
                         new_col_dict[col] = sensor + col[len(qc_sensor_name):]
-                    temp_qartod_final.rename(columns=new_col_dict, inplace=True)
+                    temp_qartod_final = temp_qartod_final.rename(columns=new_col_dict)
                 
 
             else:
