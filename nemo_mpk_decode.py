@@ -23,7 +23,7 @@ import datetime
 import msgpack
 
 curdir = os.getcwd()
-if '/home/nwem/' in curdir:
+if '/home/nemo/' in curdir:
     orcamain = '/home/nemo/nemo_datatools/'
 else:
     orcamain = 'C:/Users/APLUser/NWEM_DataProcessing'

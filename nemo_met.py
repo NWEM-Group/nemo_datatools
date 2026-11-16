@@ -695,6 +695,7 @@ def process_wind_files(buoy_designation, windpaths, compasspaths):
     wind_meandf['wind_speed'] = np.sqrt(wind_meandf['eastward_wind']**2 + 
                                         wind_meandf['northward_wind']**2)
     # Calculate wind direction from the averaged wind components
+    # Note, these are true eastward and northward components, not in instrument coordinates
     [R, THETA] = cart2pol(wind_meandf['eastward_wind'], wind_meandf['northward_wind'])
     true_THETA = radians_2_degrees_truenorth(THETA)
     wind_meandf['wind_from_direction'] = true_THETA
