@@ -519,6 +519,12 @@ def check_buoy_and_plot(ChaBa_lon, ChaBa_lat, testdist=150):
              title_str, fontsize=12,
              ha='center',va='top')
 
+    # Add a figure creation timestamp in the lower right corner of the figure
+    timestamp_str = "Figure created:\n" + datetime.datetime.now().strftime('%Y-%b-%d %H:%M')
+    fig.text(xmin+ax1_width+xoffset+ax2_width, ymin-0.05, 
+             timestamp_str, fontsize=6,
+             ha='left', va='center')
+
 
     # Save the figure
     if '/home/nemo/' in os.getcwd():
